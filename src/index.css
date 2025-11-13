@@ -1,0 +1,74 @@
+/* src/index.css */
+
+/* --- INÍCIO DA CORREÇÃO (Build CSS Warning) --- */
+/* Importa o CSS base do Leaflet */
+/* Isto TEM de estar na PRIMEIRA LINHA, antes do tailwind. */
+@import 'leaflet/dist/leaflet.css';
+/* --- FIM DA CORREÇÃO --- */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- INÍO DA CORREÇÃO --- */
+/*
+  Isto define a cor de fundo padrão para a APLICAÇÃO INTEIRA.
+  Agora, quando você "rolar para além" do conteúdo, o fundo
+  será bg-gray-900 (escuro), e não branco.
+*/
+@layer base {
+  body {
+    @apply bg-gray-900;
+  }
+}
+/* --- FIM DA CORREÇÃO --- */
+
+/* (Pode adicionar os seus estilos CSS globais personalizados aqui em baixo, se precisar) */
+
+/* --- INÍCIO DA ADIÇÃO (Plano do Mapa V2 - Ação 2) --- */
+
+/* Define a altura do container do mapa */
+.admin-map-container {
+  height: 500px;
+  width: 100%;
+  background-color: #4a5568; /* Um fundo escuro (gray-600) enquanto carrega */
+  border-radius: 0.5rem; /* rounded-lg */
+  overflow: hidden; /* Garante que o mapa fica dentro das bordas */
+}
+
+/* Estilo do "Ponto Vermelho" (A sua ideia)
+  Isto substitui o pino azul padrão por um ponto vermelho.
+*/
+.red-dot-marker {
+  background-color: #ef4444; /* Vermelho (red-500) */
+  border: 2px solid #f8fafc; /* Borda branca (slate-50) */
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 5px #000;
+}
+
+/* O Leaflet adiciona isto ao popup, ajustamos para o tema escuro */
+.leaflet-popup-content-wrapper {
+  background-color: #1f2937; /* bg-gray-800 */
+  color: #f9fafb; /* text-gray-100 */
+  border-radius: 0.5rem; /* rounded-lg */
+}
+.leaflet-popup-content {
+  margin: 12px !important;
+  font-family: inherit;
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.25rem; /* leading-5 */
+}
+.leaflet-popup-tip {
+  background-color: #1f2937; /* bg-gray-800 */
+}
+.leaflet-popup-close-button {
+  color: #f9fafb !important; /* text-gray-100 */
+  padding-top: 4px;
+  padding-right: 4px;
+}
+.leaflet-popup-close-button:hover {
+  background-color: #374151; /* bg-gray-700 */
+}
+/* --- FIM DA ADIÇÃO --- */
