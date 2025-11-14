@@ -1,4 +1,5 @@
 // src/features/profile/components/EditProfileForm.tsx
+// (COLE ISTO NO SEU ARQUIVO)
 
 import { useState, useEffect, useRef } from 'react';
 // --- INÍCIO DA REMOÇÃO ---
@@ -114,12 +115,16 @@ export const EditProfileForm = () => {
       setGender((profile.gender as any) || '');
       setBio(profile.bio || '');
 
+      // --- INÍCIO DA CORREÇÃO (Bug do localhost ao carregar) ---
+      // O profile.imageUrl (do Cloudinary) já é um URL completo.
+      // Não precisamos mais do backendUrl aqui.
       if (profile.imageUrl && !pendingAvatar) {
-        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
-        setAvatarPreview(`${backendUrl}/${profile.imageUrl}`);
+        // const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // <-- REMOVIDO
+        setAvatarPreview(profile.imageUrl); // <-- CORRIGIDO
       } else if (!profile.imageUrl && !pendingAvatar) {
          setAvatarPreview(null);
       }
+      // --- FIM DA CORREÇÃO ---
     }
   }, [profile, pendingAvatar]);
 
@@ -185,10 +190,15 @@ export const EditProfileForm = () => {
             onSuccess: (updatedProfileWithAvatar) => {
               console.log('Avatar enviado com sucesso.');
               setPendingAvatar(null); 
+              
+              // --- INÍCIO DA CORREÇÃO (Bug do localhost ao salvar) ---
+              // O imageUrl (do Cloudinary) já é um URL completo.
               if (updatedProfileWithAvatar.imageUrl) {
-                 const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
-                 setAvatarPreview(`${backendUrl}/${updatedProfileWithAvatar.imageUrl}`);
+                 // const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // <-- REMOVIDO
+                 setAvatarPreview(updatedProfileWithAvatar.imageUrl); // <-- CORRIGIDO
               }
+              // --- FIM DA CORREÇÃO ---
+
               queryClient.invalidateQueries({ queryKey: ['myProfile'] });
               console.log("Perfil e Avatar salvos. Navegando para /discovery...");
               navigate('/discovery', { replace: true });

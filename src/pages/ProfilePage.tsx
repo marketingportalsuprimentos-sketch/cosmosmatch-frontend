@@ -58,12 +58,12 @@ import type {
 const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolean; }) => {
   // ... (código igual)
   const navigate = useNavigate();
-  const backendBaseUrl = (
-    import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-  ).replace('/api', '');
-  const avatarUrl = profile.imageUrl
-    ? `${backendBaseUrl}/${profile.imageUrl}`
-    : null;
+
+  // --- INÍCIO DA CORREÇÃO (Bug do localhost no Header) ---
+  // A constante backendBaseUrl foi REMOVIDA.
+  // O profile.imageUrl (do Cloudinary) já é um URL completo.
+  const avatarUrl = profile.imageUrl ?? null; // <-- CORRIGIDO
+  // --- FIM DA CORREÇÃO ---
 
   const targetUserId = profile.userId;
 
@@ -508,8 +508,22 @@ const ProfileCosmicDetails = ({
 // --- FIM DA ALTERAÇÃO ---
 
 
-// (Componente ConnectionList - Sem alterações)
-const ConnectionList = ({ users, isLoading, error, emptyMessage, backendBaseUrl, }: { users: BasicUserInfo[] | undefined; isLoading: boolean; error: Error | null; emptyMessage: string; backendBaseUrl: string; }) => {
+// (Componente ConnectionList - CORRIGIDO)
+// --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
+// Removida a prop 'backendBaseUrl'
+const ConnectionList = ({
+  users,
+  isLoading,
+  error,
+  emptyMessage,
+}: {
+  users: BasicUserInfo[] | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  emptyMessage: string;
+}) => {
+// --- FIM DA CORREÇÃO ---
+
   // ... (código igual)
   if (isLoading) {
     return <p className="text-gray-400 text-center py-4">A carregar...</p>;
@@ -526,9 +540,10 @@ const ConnectionList = ({ users, isLoading, error, emptyMessage, backendBaseUrl,
   return (
     <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
       {users.map((user) => {
-        const imageUrl = user.profile?.imageUrl
-          ? `${backendBaseUrl}/${user.profile.imageUrl}`
-          : null;
+        // --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
+        // O imageUrl (do Cloudinary) já é um URL completo.
+        const imageUrl = user.profile?.imageUrl ?? null; // <-- CORRIGIDO
+        // --- FIM DA CORREÇÃO ---
         return (
           <Link
             to={`/profile/${user.id}`}
@@ -554,8 +569,16 @@ const ConnectionList = ({ users, isLoading, error, emptyMessage, backendBaseUrl,
   );
 };
 
-// (Componente ProfileConnections - Sem alterações)
-const ProfileConnections = ({ targetUserId, backendBaseUrl, }: { targetUserId: string; backendBaseUrl: string; }) => {
+// (Componente ProfileConnections - CORRIGIDO)
+// --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
+// Removida a prop 'backendBaseUrl'
+const ProfileConnections = ({
+  targetUserId,
+}: {
+  targetUserId: string;
+}) => {
+// --- FIM DA CORREÇÃO ---
+
   // ... (código igual)
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>(
     'followers',
@@ -612,7 +635,7 @@ const ProfileConnections = ({ targetUserId, backendBaseUrl, }: { targetUserId: s
             isLoading={isLoadingFollowers}
             error={followersError}
             emptyMessage="Nenhum seguidor encontrado."
-            backendBaseUrl={backendBaseUrl}
+            // backendBaseUrl={backendBaseUrl} // <-- REMOVIDO
           />
         ) : (
           <ConnectionList
@@ -620,7 +643,7 @@ const ProfileConnections = ({ targetUserId, backendBaseUrl, }: { targetUserId: s
             isLoading={isLoadingFollowing}
             error={followingError}
             emptyMessage="Não está a seguir ninguém."
-            backendBaseUrl={backendBaseUrl}
+            // backendBaseUrl={backendBaseUrl} // <-- REMOVIDO
           />
         )}
       </div>
@@ -678,7 +701,7 @@ const NatalChartLockModal = ({ isOpen, onClose, counts, metas, }: { isOpen: bool
   );
 };
 
-// (Componente ProfilePage - Sem alterações)
+// (Componente ProfilePage - CORRIGIDO)
 export function ProfilePage() {
   // ... (código igual)
   const { userId } = useParams<{ userId: string }>();
@@ -716,9 +739,10 @@ export function ProfilePage() {
     setAddPhotoModalOpen(true);
   };
 
-  const backendBaseUrl = (
-    import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-  ).replace('/api', '');
+  // --- INÍCIO DA CORREÇÃO (Bug do localhost na Página) ---
+  // A constante backendBaseUrl foi REMOVIDA.
+  // Não precisamos dela, pois os componentes-filhos também foram corrigidos.
+  // --- FIM DA CORREÇÃO ---
 
   if (isLoading) {
     return (
@@ -771,10 +795,10 @@ export function ProfilePage() {
           onPhotoClick={handlePhotoClick}
         />
 
-        <ProfileConnections
-          targetUserId={targetUserId}
-          backendBaseUrl={backendBaseUrl}
-        />
+        {/* --- INÍCIO DA CORREÇÃO (Bug do localhost na Página) --- */}
+        {/* Removida a prop 'backendBaseUrl' */}
+        <ProfileConnections targetUserId={targetUserId} />
+        {/* --- FIM DA CORREÇÃO --- */}
       </div>
 
       <AddGalleryPhotoModal
