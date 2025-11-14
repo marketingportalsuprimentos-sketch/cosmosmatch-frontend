@@ -349,9 +349,14 @@ export function FeedPage() {
         label: 'Apagar',
         onClick: () => deletePostMutate(currentPostData.id),
       },
+      // --- INÍCIO DA CORREÇÃO (Build do Vercel) ---
+      // O 'cancel' também precisa de um 'onClick',
+      // mesmo que seja uma função vazia, para o TypeScript não falhar.
       cancel: {
         label: 'Cancelar',
+        onClick: () => { /* Faz nada, apenas fecha o toast */ },
       },
+      // --- FIM DA CORREÇÃO ---
       duration: 5000, // Dá 5 segundos para decidir
     });
   };
@@ -482,7 +487,7 @@ export function FeedPage() {
               </div>
             )}
             
-            {/* 5. Botões de Ação (Sem alterações) */}
+            {/* 5. Botões de Ação (COM A CORREÇÃO DO ERRO DE DIGITAÇÃO) */}
             <div className="absolute right-4 bottom-[calc(4rem+1rem)] flex flex-col space-y-5 items-center z-20">
               
               {!isOwner && (
@@ -518,7 +523,9 @@ export function FeedPage() {
                  ) : (
                    <HeartIconOutline className="h-7 w-7" />
                  )}
+                 {/* --- INÍCIO DA CORREÇÃO (Erro de Digitação) --- */}
                  <span className="text-xs font-semibold mt-1">{postToDisplay.likesCount || 0}</span>
+                 {/* --- FIM DA CORREÇÃO --- */}
               </button>
               
               <button 
