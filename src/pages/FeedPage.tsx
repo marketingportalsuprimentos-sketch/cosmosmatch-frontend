@@ -1,5 +1,5 @@
 // frontend/src/pages/FeedPage.tsx
-// (COLE ISTO NO SEU ARQUIVO)
+// (COLE ISTO NO SEU ARQUIVO - COM OS 2 ERROS CORRIGIDOS)
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -349,14 +349,14 @@ export function FeedPage() {
         label: 'Apagar',
         onClick: () => deletePostMutate(currentPostData.id),
       },
-      // --- INÍCIO DA CORREÇÃO (Build do Vercel) ---
+      // --- INÍCIO DA CORREÇÃO 1 (Build do Vercel) ---
       // O 'cancel' também precisa de um 'onClick',
       // mesmo que seja uma função vazia, para o TypeScript não falhar.
       cancel: {
         label: 'Cancelar',
         onClick: () => { /* Faz nada, apenas fecha o toast */ },
       },
-      // --- FIM DA CORREÇÃO ---
+      // --- FIM DA CORREÇÃO 1 ---
       duration: 5000, // Dá 5 segundos para decidir
     });
   };
@@ -523,9 +523,9 @@ export function FeedPage() {
                  ) : (
                    <HeartIconOutline className="h-7 w-7" />
                  )}
-                 {/* --- INÍCIO DA CORREÇÃO (Erro de Digitação) --- */}
+                 {/* --- INÍCIO DA CORREÇÃO 2 (Erro de Digitação) --- */}
                  <span className="text-xs font-semibold mt-1">{postToDisplay.likesCount || 0}</span>
-                 {/* --- FIM DA CORREÇÃO --- */}
+                 {/* --- FIM DA CORREÇÃO 2 --- */}
               </button>
               
               <button 
