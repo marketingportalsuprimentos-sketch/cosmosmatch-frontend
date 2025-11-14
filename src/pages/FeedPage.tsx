@@ -1,16 +1,18 @@
 // frontend/src/pages/FeedPage.tsx
-// (COLE ISTO NO SEU ARQUIVO)
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-// --- INÍCIO DA ADIÇÃO (Apagar Post) ---
-import { useGetFeed, useLikePost, useUnlikePost, useDeletePost } from '@/features/feed/hooks/useFeed';
-// --- FIM DA ADIÇÃO ---
+import {
+  useGetFeed,
+  useLikePost,
+  useUnlikePost,
+  useDeletePost,
+} from '@/features/feed/hooks/useFeed';
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaType, FeedPost } from '@/features/feed/services/feedApi';
 import { FeedCommentSheet } from '@/features/feed/components/FeedCommentSheet';
-import { toast } from 'sonner'; 
+import { toast } from 'sonner';
 
 import {
   UserPlusIcon,
@@ -18,7 +20,7 @@ import {
   HeartIcon as HeartIconSolid,
   ChatBubbleOvalLeftEllipsisIcon,
   ShareIcon,
-  XMarkIcon, // <-- INÍCIO DA ADIÇÃO (Apagar Post)
+  XMarkIcon,
 } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,12 +31,42 @@ import {
 } from '@/features/profile/hooks/useProfile';
 import { PersonalDayCard } from '@/features/feed/components/PersonalDayCard';
 
+// --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
+import { useQueryClient, InfiniteData } from '@tanstack/react-query';
+
+// O tipo de dados que o 'useGetFeed' retorna (inferido do seu código)
+type FeedDeck = {
+  author: {
+    id: string;
+    name: string;
+    profile?: { imageUrl: string };
+  };
+  posts: FeedPost[];
+};
+// --- FIM DA ADIÇÃO ---
+
 // (Componente de Loading - Sem alterações)
 const LoadingFeed = () => (
   <div className="flex flex-1 items-center justify-center text-white">
-    <svg className="animate-spin h-8 w-8 text-purple-400 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    <svg
+      className="animate-spin h-8 w-8 text-purple-400 mr-3"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      ></path>
     </svg>
     A carregar o feed cósmico... ✨
   </div>
@@ -42,7 +74,7 @@ const LoadingFeed = () => (
 
 // (Componente EmptyFeed - Sem alterações)
 const EmptyFeed = ({ isError }: { isError?: boolean }) => (
-   <div className="flex flex-1 items-center justify-center text-center text-gray-400 px-4">
+  <div className="flex flex-1 items-center justify-center text-center text-gray-400 px-4">
     <p>
       {isError
         ? 'Ocorreu um erro ao carregar o feed. Tente novamente mais tarde.'
@@ -52,23 +84,25 @@ const EmptyFeed = ({ isError }: { isError?: boolean }) => (
 );
 
 // (Componente PostMedia - Sem alterações)
-const PostMedia = ({ post, url }: { post: FeedPost, url: string }) => {
+const PostMedia = ({ post, url }: { post: FeedPost; url: string }) => {
   const placeholder = '/placeholder-image.png';
-  const mediaClasses = "block w-full h-full object-contain select-none"; 
+  const mediaClasses = 'block w-full h-full object-contain select-none';
 
   if (post.mediaType === MediaType.VIDEO) {
     return (
       <video
-        key={post.id} 
+        key={post.id}
         src={url}
         autoPlay
         loop
         muted
         playsInline
         className={mediaClasses}
-        onError={(e) => { (e.target as HTMLVideoElement).src = placeholder; }}
-        draggable="false" 
-        onContextMenu={(e) => e.preventDefault()} 
+        onError={(e) => {
+          (e.target as HTMLVideoElement).src = placeholder;
+        }}
+        draggable="false"
+        onContextMenu={(e) => e.preventDefault()}
       />
     );
   }
@@ -79,15 +113,16 @@ const PostMedia = ({ post, url }: { post: FeedPost, url: string }) => {
       src={url}
       alt={`Post de ${post.authorId}`}
       className={mediaClasses}
-      onError={(e) => { (e.target as HTMLImageElement).src = placeholder; }}
-      draggable="false" 
-      onContextMenu={(e) => e.preventDefault()} 
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = placeholder;
+      }}
+      draggable="false"
+      onContextMenu={(e) => e.preventDefault()}
     />
   );
 };
 
-
-// (Componente FeedProgressBars - CORRIGIDO)
+// (Componente FeedProgressBars - Sem alterações)
 const FeedProgressBars = ({
   total,
   current,
@@ -98,25 +133,22 @@ const FeedProgressBars = ({
   duration: number;
 }) => {
   return (
-    // --- INÍCIO DA CORREÇÃO (Bug do "pisca-pisca") ---
-    // O 'z-index' foi aumentado de 'z-10' (no seu ficheiro) para 'z-20'.
-    // O Header do Autor (com o nome) está em 'z-10'.
-    // Ao definir a barra como 'z-20', garantimos que ela fica
-    // sempre POR CIMA do nome, resolvendo o "pisca-pisca".
     <div className="absolute top-3 left-0 right-0 z-20 flex gap-1 pointer-events-none px-4">
-    {/* --- FIM DA CORREÇÃO --- */}
       {Array.from({ length: total }).map((_, idx) => {
         const isActive = idx === current;
         const isPast = idx < current;
 
         return (
-          <div key={idx} className="h-1 flex-1 rounded-full overflow-hidden bg-white/30">
+          <div
+            key={idx}
+            className="h-1 flex-1 rounded-full overflow-hidden bg-white/30"
+          >
             {isPast ? (
               <div className="h-full w-full bg-white" />
             ) : isActive ? (
               <motion.div
                 className="h-full bg-white"
-                style={{ willChange: 'width' }} 
+                style={{ willChange: 'width' }}
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
                 transition={{ duration: duration, ease: 'linear' }}
@@ -131,13 +163,13 @@ const FeedProgressBars = ({
   );
 };
 
-// (Resto do ficheiro FeedPage.tsx - sem mais alterações)
-// ... (o restante do código que você colou está correto e permanece igual) ...
-
 export function FeedPage() {
-  const PHOTO_DURATION_SECONDS = 5; 
+  const PHOTO_DURATION_SECONDS = 5;
 
   const navigate = useNavigate();
+  // --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
+  const queryClient = useQueryClient();
+  // --- FIM DA ADIÇÃO ---
 
   const {
     data: feedData,
@@ -150,26 +182,19 @@ export function FeedPage() {
 
   const { mutate: likePostMutate, isPending: isLiking } = useLikePost();
   const { mutate: unlikePostMutate, isPending: isUnliking } = useUnlikePost();
-  
-  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
-  const { mutate: deletePostMutate, isPending: isDeletingPost } = useDeletePost();
-  // --- FIM DA ADIÇÃO ---
+  const { mutate: deletePostMutate, isPending: isDeletingPost } =
+    useDeletePost();
 
   const [currentDeckIndex, setCurrentDeckIndex] = useState(0);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
-  const [viewingCommentsForPostId, setViewingCommentsForPostId] = useState<string | null>(null);
-  
-  // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
+  const [viewingCommentsForPostId, setViewingCommentsForPostId] =
+    useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  // --- FIM DA CORREÇÃO ---
 
   const currentDeckData = feedData?.pages?.[currentDeckIndex];
   const currentPostData = currentDeckData?.posts?.[currentPostIndex];
-  
-  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
   const isActionLoading = isLiking || isUnliking || isDeletingPost;
-  // --- FIM DA ADIÇÃO ---
 
   // (Handlers de Swipe - Sem alterações)
   const handleSwipeLeft = useCallback(() => {
@@ -181,20 +206,33 @@ export function FeedPage() {
 
   const handleSwipeUp = useCallback(() => {
     const nextDeckIndex = currentDeckIndex + 1;
-    if ((feedData?.pages && nextDeckIndex < feedData.pages.length) || hasNextPage) {
-        if (hasNextPage && (!feedData?.pages || nextDeckIndex >= feedData.pages.length) && !isFetchingNextPage) {
-             fetchNextPage();
-        }
-        setCurrentDeckIndex(nextDeckIndex);
-        setCurrentPostIndex(0);
+    if (
+      (feedData?.pages && nextDeckIndex < feedData.pages.length) ||
+      hasNextPage
+    ) {
+      if (
+        hasNextPage &&
+        (!feedData?.pages || nextDeckIndex >= feedData.pages.length) &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+      setCurrentDeckIndex(nextDeckIndex);
+      setCurrentPostIndex(0);
     }
-  }, [currentDeckIndex, feedData?.pages, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [
+    currentDeckIndex,
+    feedData?.pages,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   const handleSwipeDown = useCallback(() => {
     const prevDeckIndex = currentDeckIndex - 1;
     if (prevDeckIndex >= 0) {
       setCurrentDeckIndex(prevDeckIndex);
-      setCurrentPostIndex(0); 
+      setCurrentPostIndex(0);
     }
   }, [currentDeckIndex]);
 
@@ -216,23 +254,25 @@ export function FeedPage() {
 
   // (useEffect de validação de índice - Sem alterações)
   useEffect(() => {
-    if (feedData?.pages && currentDeckIndex >= feedData.pages.length && !hasNextPage && !isFetchingNextPage) {
-       setCurrentDeckIndex(Math.max(0, feedData.pages.length - 1));
-       setCurrentPostIndex(0);
+    if (
+      feedData?.pages &&
+      currentDeckIndex >= feedData.pages.length &&
+      !hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      setCurrentDeckIndex(Math.max(0, feedData.pages.length - 1));
+      setCurrentPostIndex(0);
     }
   }, [feedData?.pages, currentDeckIndex, hasNextPage, isFetchingNextPage]);
 
-
-  // (useEffect do Temporizador - CORRIGIDO)
+  // (useEffect do Temporizador - Sem alterações)
   useEffect(() => {
-    // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
-    // O timer SÓ avança se:
-    // 1. Tivermos dados (currentPostData && currentDeckData)
-    // 2. Os comentários NÃO estiverem abertos (!viewingCommentsForPostId)
-    // 3. O feed NÃO estiver pausado (!isPaused)
-    if (currentPostData && currentDeckData && !viewingCommentsForPostId && !isPaused) {
-    // --- FIM DA CORREÇÃO ---
-    
+    if (
+      currentPostData &&
+      currentDeckData &&
+      !viewingCommentsForPostId &&
+      !isPaused
+    ) {
       let durationInSeconds: number;
       if (
         currentPostData.mediaType === MediaType.VIDEO &&
@@ -243,43 +283,42 @@ export function FeedPage() {
       } else {
         durationInSeconds = PHOTO_DURATION_SECONDS;
       }
-      
+
       const timerId = setTimeout(() => {
-        const isLastPostInDeck = currentPostIndex === currentDeckData.posts.length - 1;
+        const isLastPostInDeck =
+          currentPostIndex === currentDeckData.posts.length - 1;
 
         if (isLastPostInDeck) {
           handleSwipeUp();
         } else {
           handleSwipeLeft();
         }
-      }, durationInSeconds * 1000); 
+      }, durationInSeconds * 1000);
 
       return () => {
         clearTimeout(timerId);
       };
-    }    
+    }
   }, [
-      currentPostIndex, 
-      currentDeckIndex, 
-      currentPostData, 
-      currentDeckData, 
-      handleSwipeLeft, 
-      handleSwipeUp,
-      viewingCommentsForPostId,
-      isPaused, // <-- INÍCIO DA CORREÇÃO (Pausar o Timer) - Adicionado ao array
+    currentPostIndex,
+    currentDeckIndex,
+    currentPostData,
+    currentDeckData,
+    handleSwipeLeft,
+    handleSwipeUp,
+    viewingCommentsForPostId,
+    isPaused,
   ]);
 
-  
   // (Handler de Like - Sem alterações)
   const handleLikeToggle = () => {
-    if (!currentPostData || isActionLoading) return; // <-- Corrigido para 'isActionLoading'
+    if (!currentPostData || isActionLoading) return;
     if (currentPostData.isLikedByMe) {
       unlikePostMutate(currentPostData.id);
     } else {
       likePostMutate(currentPostData.id);
     }
   };
-
 
   // (Handler de Comentário - Sem alterações)
   const handleCommentClick = () => {
@@ -288,25 +327,29 @@ export function FeedPage() {
     }
   };
 
-
-  // (Lógica do Botão Conectar - Sem alterações)
-  const { user: loggedInUser } = useAuth();
+  // --- INÍCIO DA ATUALIZAÇÃO (Real-time Feed) ---
+  // Apanhamos o 'socket' do contexto de autenticação
+  const { user: loggedInUser, socket } = useAuth();
+  // --- FIM DA ATUALIZAÇÃO ---
   const authorId = currentDeckData?.author?.id;
   const isOwner = loggedInUser?.id === authorId;
 
   const { data: followingList, isLoading: isLoadingFollowing } = useGetFollowing(
     loggedInUser?.id,
-    { enabled: !!loggedInUser?.id && !isOwner }
+    { enabled: !!loggedInUser?.id && !isOwner },
   );
-  
+
   const { mutate: followUser, isPending: isFollowing } = useFollowUser();
   const { mutate: unfollowUser, isPending: isUnfollowing } = useUnfollowUser();
 
-  const isAlreadyFollowing = followingList?.some(user => user.id === authorId);
-  const isConnectLoading = isFollowing || isUnfollowing || isLoadingFollowing;
+  const isAlreadyFollowing = followingList?.some(
+    (user) => user.id === authorId,
+  );
+  const isConnectLoading =
+    isFollowing || isUnfollowing || isLoadingFollowing;
 
   const handleConnectClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     if (isConnectLoading || !authorId || isOwner) return;
     if (isAlreadyFollowing) {
       unfollowUser(authorId);
@@ -314,7 +357,6 @@ export function FeedPage() {
       followUser(authorId);
     }
   };
-  // --- FIM DA LÓGICA ---
 
   // (Handler de Partilha - Sem alterações)
   const handleShare = () => {
@@ -350,71 +392,157 @@ export function FeedPage() {
     }
   };
 
-  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+  // (Handler de Apagar Post - Sem alterações)
   const handleDeletePost = () => {
     if (!currentPostData || isDeletingPost) return;
 
-    // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
-    // 1. Pausa o timer
     setIsPaused(true);
-    // --- FIM DA CORREÇÃO ---
 
-    // Usar o 'toast.warning' (do sonner) para confirmação
     toast.warning('Apagar este post?', {
       description: 'Esta ação não pode ser desfeita.',
       action: {
         label: 'Apagar',
         onClick: () => deletePostMutate(currentPostData.id),
       },
-      // --- INÍCIO DA CORREÇÃO 1 (Build do Vercel) ---
-      // O 'cancel' também precisa de um 'onClick',
-      // mesmo que seja uma função vazia, para o TypeScript não falhar.
       cancel: {
         label: 'Cancelar',
-        onClick: () => { /* Faz nada, o onDismiss trata de retomar */ },
+        onClick: () => {
+          /* Faz nada, o onDismiss trata de retomar */
+        },
       },
-      // --- FIM DA CORREÇÃO 1 ---
-      duration: 5000, // Dá 5 segundos para decidir
-
-      // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
-      // 2. Retoma o timer quando o toast for fechado (por qualquer motivo)
+      duration: 5000, 
       onDismiss: () => setIsPaused(false),
-      // --- FIM DA CORREÇÃO ---
     });
   };
+  
+  // --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
+  /**
+   * Este useEffect regista os listeners do WebSocket.
+   */
+  useEffect(() => {
+    // Se o socket não estiver pronto (a ligar ou falhou), não faz nada.
+    if (!socket) {
+      console.log('Socket.io: Aguardando conexão...');
+      return;
+    }
+
+    console.log('Socket.io: Conectado e a ouvir eventos do feed.');
+
+    /**
+     * Ouve por 'feed:new_post'.
+     * Quando um post novo é criado, invalidamos a query 'feed'.
+     * O React-Query irá re-buscar a página 0.
+     */
+    const handleNewPost = (newPost: FeedPost) => {
+      console.log('Socket.io: Evento [feed:new_post] recebido!', newPost);
+      // Invalida a query 'feed'. Isto força o 'useGetFeed' a re-buscar a página 0.
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    };
+
+    /**
+     * Ouve por 'feed:delete_post'.
+     * Quando um post é apagado, temos de o remover manualmente do cache.
+     * Não podemos 'invalidar' pois o post pode estar numa página antiga.
+     */
+    const handleDeletePost = (deleted: {
+      postId: string;
+      authorId: string;
+    }) => {
+      console.log('Socket.io: Evento [feed:delete_post] recebido!', deleted);
+      
+      // 'setQueryData' atualiza o cache do react-query
+      queryClient.setQueryData(
+        ['feed'], // A key da nossa query
+        (oldData: InfiniteData<FeedDeck> | undefined) => {
+          // Se não houver dados em cache, não faz nada
+          if (!oldData) return oldData;
+
+          // 1. Mapeia todas as 'páginas' (decks)
+          const newPages = oldData.pages
+            .map((deck) => {
+              // Se este deck não for do autor do post apagado,
+              // retorna o deck intacto.
+              if (deck.author.id !== deleted.authorId) {
+                return deck;
+              }
+
+              // Se for o deck do autor, filtra os posts
+              const newPosts = deck.posts.filter(
+                (post) => post.id !== deleted.postId,
+              );
+
+              // Retorna o deck com a lista de posts atualizada
+              return {
+                ...deck,
+                posts: newPosts,
+              };
+            })
+            // 2. Filtra os decks que podem ter ficado vazios
+            .filter((deck) => deck.posts.length > 0);
+
+          // Retorna a estrutura de dados completa para o react-query
+          return {
+            ...oldData,
+            pages: newPages,
+          };
+        },
+      );
+    };
+
+    // Regista os listeners no socket
+    socket.on('feed:new_post', handleNewPost);
+    socket.on('feed:delete_post', handleDeletePost);
+
+    // Função de cleanup (IMPORTANTE)
+    // Remove os listeners quando o componente for desmontado
+    return () => {
+      console.log('Socket.io: A desligar listeners do feed.');
+      socket.off('feed:new_post', handleNewPost);
+      socket.off('feed:delete_post', handleDeletePost);
+    };
+  }, [socket, queryClient]); // Dependências: socket e queryClient
   // --- FIM DA ADIÇÃO ---
 
 
   // (Renderização de Loading/Empty - Sem alterações)
-  if (isLoadingFeed) { return <LoadingFeed />; }
-  if (isError || !feedData || feedData.pages.length === 0 || !feedData.pages[0] || feedData.pages[0].posts.length === 0) { 
-    return <EmptyFeed isError={isError} />; 
+  if (isLoadingFeed) {
+    return <LoadingFeed />;
   }
-  if (!currentDeckData && (isFetchingNextPage || currentDeckIndex >= feedData.pages.length)) { 
-    return <LoadingFeed />; 
+  if (
+    isError ||
+    !feedData ||
+    feedData.pages.length === 0 ||
+    !feedData.pages[0] ||
+    feedData.pages[0].posts.length === 0
+  ) {
+    return <EmptyFeed isError={isError} />;
   }
-  if (!currentDeckData || currentDeckData.posts.length === 0) { 
-    return <EmptyFeed />; 
+  if (
+    !currentDeckData &&
+    (isFetchingNextPage || currentDeckIndex >= feedData.pages.length)
+  ) {
+    return <LoadingFeed />;
+  }
+  if (!currentDeckData || currentDeckData.posts.length === 0) {
+    return <EmptyFeed />;
   }
   if (currentPostIndex >= currentDeckData.posts.length) {
-      setCurrentPostIndex(0);
-      return <LoadingFeed />;
+    setCurrentPostIndex(0);
+    return <LoadingFeed />;
   }
 
-   const postToDisplay = currentDeckData.posts[currentPostIndex];
-   const authorToDisplay = currentDeckData.author;
-   
-   // (Lógica de URL da imagem - Sem alterações, já estava correta)
-   const defaultAvatar = '/default-avatar.png';
-   const placeholderImage = '/placeholder-image.png';
-   const authorAvatarUrl = authorToDisplay?.profile?.imageUrl ?? defaultAvatar;
-   const postMediaUrl = postToDisplay?.imageUrl ?? placeholderImage;
-   // --- FIM DA LÓGICA ---
+  const postToDisplay = currentDeckData.posts[currentPostIndex];
+  const authorToDisplay = currentDeckData.author;
 
-   const activePostDuration = 
-     (postToDisplay.mediaType === MediaType.VIDEO && postToDisplay.videoDuration)
-       ? postToDisplay.videoDuration
-       : PHOTO_DURATION_SECONDS;
+  const defaultAvatar = '/default-avatar.png';
+  const placeholderImage = '/placeholder-image.png';
+  const authorAvatarUrl = authorToDisplay?.profile?.imageUrl ?? defaultAvatar;
+  const postMediaUrl = postToDisplay?.imageUrl ?? placeholderImage;
+
+  const activePostDuration =
+    postToDisplay.mediaType === MediaType.VIDEO && postToDisplay.videoDuration
+      ? postToDisplay.videoDuration
+      : PHOTO_DURATION_SECONDS;
 
   // (JSX - Sem alterações)
   return (
@@ -423,7 +551,6 @@ export function FeedPage() {
       className="flex min-h-screen flex-col bg-black text-white relative overflow-hidden"
     >
       <div className="relative flex-1">
-        
         <AnimatePresence>
           <motion.div
             key={`${currentDeckIndex}-${currentPostIndex}`}
@@ -433,12 +560,12 @@ export function FeedPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* 1. Mídia (Sem alterações) */}
+            {/* 1. Mídia */}
             <div className="absolute inset-0 px-4">
               <PostMedia post={postToDisplay} url={postMediaUrl} />
             </div>
 
-            {/* 2. Barras de Progresso (Sem alterações) */}
+            {/* 2. Barras de Progresso */}
             {currentDeckData.posts.length >= 1 && (
               <FeedProgressBars
                 key={`${currentDeckIndex}-${currentPostIndex}`}
@@ -447,18 +574,20 @@ export function FeedPage() {
                 duration={activePostDuration}
               />
             )}
-            
-            {/* 3. Header do Autor (COM O BOTÃO APAGAR) */}
+
+            {/* 3. Header do Autor */}
             <div className="pointer-events-none absolute top-6 left-0 right-0 z-10 px-4">
               <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3">
                 <img
-                    src={authorAvatarUrl}
-                    alt={authorToDisplay?.name || 'Avatar'}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-600 bg-gray-700"
-                    onError={(e) => { (e.target as HTMLImageElement).src = defaultAvatar; }}
+                  src={authorAvatarUrl}
+                  alt={authorToDisplay?.name || 'Avatar'}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-gray-600 bg-gray-700"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = defaultAvatar;
+                  }}
                 />
-                
-                <span 
+
+                <span
                   className="font-semibold text-lg text-white drop-shadow-md truncate cursor-pointer hover:underline"
                   style={{ pointerEvents: 'auto' }}
                   onClick={(e) => {
@@ -470,37 +599,48 @@ export function FeedPage() {
                 >
                   {authorToDisplay?.name || 'Utilizador'}
                 </span>
-                
-                {/* --- INÍCIO DA ADIÇÃO (Botão Apagar "X") --- */}
-                {/* O 'isOwner' já estava definido e verifica se o user logado é o autor */}
+
                 {isOwner && (
                   <button
                     style={{ pointerEvents: 'auto' }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeletePost(); // Chama a nova função
+                      handleDeletePost();
                     }}
-                    disabled={isDeletingPost} // Desativa se estiver a apagar
+                    disabled={isDeletingPost}
                     className="p-2 text-gray-400 rounded-full hover:bg-black/50 hover:text-white disabled:opacity-50"
                     aria-label="Apagar post"
                   >
-                    {/* Mostra um 'spinner' se estiver a apagar, senão mostra o 'X' */}
                     {isDeletingPost ? (
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        ></path>
                       </svg>
                     ) : (
                       <XMarkIcon className="w-5 h-5" />
                     )}
                   </button>
                 )}
-                {/* --- FIM DA ADIÇÃO --- */}
-                
               </div>
             </div>
 
-            {/* 4. Gradiente e Legenda (Sem alterações) */}
+            {/* 4. Gradiente e Legenda */}
             {postToDisplay.content && (
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 pt-24 pb-4 px-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
                 <p className="text-sm text-white drop-shadow-sm">
@@ -508,10 +648,9 @@ export function FeedPage() {
                 </p>
               </div>
             )}
-            
-            {/* 5. Botões de Ação (COM A CORREÇÃO DO ERRO DE DIGITAÇÃO) */}
+
+            {/* 5. Botões de Ação */}
             <div className="absolute right-4 bottom-[calc(4rem+1rem)] flex flex-col space-y-5 items-center z-20">
-              
               {!isOwner && (
                 <button
                   style={{ pointerEvents: 'auto' }}
@@ -519,7 +658,11 @@ export function FeedPage() {
                   disabled={isConnectLoading}
                   className={`text-white flex flex-col items-center p-2 rounded-full bg-black/40 backdrop-blur-sm transition-colors duration-150 disabled:opacity-50
                     ${isConnectLoading ? 'opacity-50' : ''}
-                    ${isAlreadyFollowing ? 'hover:text-gray-400' : 'hover:text-indigo-400'}
+                    ${
+                      isAlreadyFollowing
+                        ? 'hover:text-gray-400'
+                        : 'hover:text-indigo-400'
+                    }
                   `}
                 >
                   {isAlreadyFollowing ? (
@@ -533,30 +676,30 @@ export function FeedPage() {
               <button
                 style={{ pointerEvents: 'auto' }}
                 onClick={handleLikeToggle}
-                disabled={isActionLoading} // <-- Corrigido para 'isActionLoading'
+                disabled={isActionLoading}
                 className={`text-white flex flex-col items-center p-2 rounded-full bg-black/40 backdrop-blur-sm transition-colors duration-150 disabled:opacity-50
-                  ${
-                    !postToDisplay.isLikedByMe ? 'hover:text-red-400' : ''
-                  }
+                  ${!postToDisplay.isLikedByMe ? 'hover:text-red-400' : ''}
                 `}
               >
-                 {postToDisplay.isLikedByMe ? (
-                   <HeartIconSolid className="h-7 w-7 text-red-500" />
-                 ) : (
-                   <HeartIconOutline className="h-7 w-7" />
-                 )}
-                 {/* --- INÍCIO DA CORREÇÃO 2 (Erro de Digitação) --- */}
-                 <span className="text-xs font-semibold mt-1">{postToDisplay.likesCount || 0}</span>
-                 {/* --- FIM DA CORREÇÃO 2 --- */}
+                {postToDisplay.isLikedByMe ? (
+                  <HeartIconSolid className="h-7 w-7 text-red-500" />
+                ) : (
+                  <HeartIconOutline className="h-7 w-7" />
+                )}
+                <span className="text-xs font-semibold mt-1">
+                  {postToDisplay.likesCount || 0}
+                </span>
               </button>
-              
-              <button 
+
+              <button
                 style={{ pointerEvents: 'auto' }}
                 onClick={handleCommentClick}
                 className="text-white flex flex-col items-center p-2 rounded-full bg-black/40 backdrop-blur-sm hover:text-blue-400 transition-colors duration-150"
               >
-                 <ChatBubbleOvalLeftEllipsisIcon className="h-7 w-7" />
-                 <span className="text-xs font-semibold mt-1">{postToDisplay.commentsCount || 0}</span>
+                <ChatBubbleOvalLeftEllipsisIcon className="h-7 w-7" />
+                <span className="text-xs font-semibold mt-1">
+                  {postToDisplay.commentsCount || 0}
+                </span>
               </button>
 
               <button
@@ -564,20 +707,19 @@ export function FeedPage() {
                 onClick={handleShare}
                 className="text-white flex flex-col items-center p-2 rounded-full bg-black/40 backdrop-blur-sm hover:text-green-400 transition-colors duration-150"
               >
-                <ShareIcon className="h-7 w-7" /> 
-                <span className="text-xs font-semibold mt-1">Compartilhar</span>
+                <ShareIcon className="h-7 w-7" />
+                <span className="text-xs font-semibold mt-1">
+                  Compartilhar
+                </span>
               </button>
-           </div>
-           
+            </div>
           </motion.div>
         </AnimatePresence>
 
-        {/* --- CORREÇÃO: Card Fixo --- */}
-        {/* O <PersonalDayCard /> (importado) está aqui, isolado */}
+        {/* Card Fixo */}
         <PersonalDayCard />
-        {/* --- FIM DA CORREÇÃO --- */}
-        
-        {/* (Loading next page - Sem alterações) */}
+
+        {/* Loading next page */}
         {isFetchingNextPage && (
           <div className="absolute bottom-[calc(4rem+1rem)] left-1/2 -translate-x-1-2 text-xs bg-black/50 px-2 py-1 rounded animate-pulse">
             Carregando próximo...
@@ -585,19 +727,15 @@ export function FeedPage() {
         )}
       </div>
 
-      {/* --- INÍCIO DA CORREÇÃO (Sintaxe JSX) --- */}
-      {/* O comentário foi movido para fora da tag */}
       <AnimatePresence>
         {viewingCommentsForPostId && (
           <FeedCommentSheet
             postId={viewingCommentsForPostId}
-            authorId={currentDeckData?.author?.id} 
+            authorId={currentDeckData?.author?.id}
             onClose={() => setViewingCommentsForPostId(null)}
           />
         )}
       </AnimatePresence>
-      {/* --- FIM DA CORREÇÃO --- */}
-
     </div>
   );
 }
