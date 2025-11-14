@@ -38,7 +38,11 @@ interface ProfileCardProps {
 
 const SWIPE_THRESHOLD = 100;
 
-const BACKEND_URL = 'http://localhost:3000';
+// --- INÍCIO DA CORREÇÃO (Bug do localhost) ---
+// A constante BACKEND_URL foi REMOVIDA. Ela estava a causar o bug
+// ao adicionar "http://localhost:3000" ao URL do Cloudinary.
+// const BACKEND_URL = 'http://localhost:3000'; // <-- REMOVIDO
+// --- FIM DA CORREÇÃO ---
 
 export function ProfileCard({ profile, onSwipe, onTap }: ProfileCardProps) {
   const x = useMotionValue(0);
@@ -96,9 +100,13 @@ export function ProfileCard({ profile, onSwipe, onTap }: ProfileCardProps) {
   const displayCity = profile.profile?.currentCity ?? 'N/A';
   // --- FIM DA ATUALIZAÇÃO ---
   
-  const imageUrl = profile.profile?.imageUrl 
-    ? `${BACKEND_URL}/${profile.profile.imageUrl}` 
-    : null;
+  // --- INÍCIO DA CORREÇÃO (Bug do localhost) ---
+  // A lógica foi simplificada. O imageUrl agora vem completo
+  // do Cloudinary (ex: "https://res.cloudinary.com/...")
+  // e é usado diretamente.
+  const imageUrl = profile.profile?.imageUrl ?? null;
+  // --- FIM DA CORREÇÃO ---
+
   const compatibilityScore = profile.compatibility?.score ?? 0;
   const name = profile.name ?? 'Usuário';
   
