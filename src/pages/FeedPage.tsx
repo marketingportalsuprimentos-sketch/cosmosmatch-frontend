@@ -1,5 +1,5 @@
 // frontend/src/pages/FeedPage.tsx
-// (COLE ISTO NO SEU ARQUIVO - COM OS 2 ERROS CORRIGIDOS)
+// (COLE ISTO NO SEU ARQUIVO)
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -159,6 +159,10 @@ export function FeedPage() {
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
   const [viewingCommentsForPostId, setViewingCommentsForPostId] = useState<string | null>(null);
+  
+  // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
+  const [isPaused, setIsPaused] = useState(false);
+  // --- FIM DA CORREÇÃO ---
 
   const currentDeckData = feedData?.pages?.[currentDeckIndex];
   const currentPostData = currentDeckData?.posts?.[currentPostIndex];
@@ -219,9 +223,16 @@ export function FeedPage() {
   }, [feedData?.pages, currentDeckIndex, hasNextPage, isFetchingNextPage]);
 
 
-  // (useEffect do Temporizador - Sem alterações)
+  // (useEffect do Temporizador - CORRIGIDO)
   useEffect(() => {
-    if (currentPostData && currentDeckData && !viewingCommentsForPostId) {
+    // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
+    // O timer SÓ avança se:
+    // 1. Tivermos dados (currentPostData && currentDeckData)
+    // 2. Os comentários NÃO estiverem abertos (!viewingCommentsForPostId)
+    // 3. O feed NÃO estiver pausado (!isPaused)
+    if (currentPostData && currentDeckData && !viewingCommentsForPostId && !isPaused) {
+    // --- FIM DA CORREÇÃO ---
+    
       let durationInSeconds: number;
       if (
         currentPostData.mediaType === MediaType.VIDEO &&
@@ -254,7 +265,8 @@ export function FeedPage() {
       currentDeckData, 
       handleSwipeLeft, 
       handleSwipeUp,
-      viewingCommentsForPostId 
+      viewingCommentsForPostId,
+      isPaused, // <-- INÍCIO DA CORREÇÃO (Pausar o Timer) - Adicionado ao array
   ]);
 
   
@@ -342,6 +354,11 @@ export function FeedPage() {
   const handleDeletePost = () => {
     if (!currentPostData || isDeletingPost) return;
 
+    // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
+    // 1. Pausa o timer
+    setIsPaused(true);
+    // --- FIM DA CORREÇÃO ---
+
     // Usar o 'toast.warning' (do sonner) para confirmação
     toast.warning('Apagar este post?', {
       description: 'Esta ação não pode ser desfeita.',
@@ -354,10 +371,15 @@ export function FeedPage() {
       // mesmo que seja uma função vazia, para o TypeScript não falhar.
       cancel: {
         label: 'Cancelar',
-        onClick: () => { /* Faz nada, apenas fecha o toast */ },
+        onClick: () => { /* Faz nada, o onDismiss trata de retomar */ },
       },
       // --- FIM DA CORREÇÃO 1 ---
       duration: 5000, // Dá 5 segundos para decidir
+
+      // --- INÍCIO DA CORREÇÃO (Pausar o Timer) ---
+      // 2. Retoma o timer quando o toast for fechado (por qualquer motivo)
+      onDismiss: () => setIsPaused(false),
+      // --- FIM DA CORREÇÃO ---
     });
   };
   // --- FIM DA ADIÇÃO ---
