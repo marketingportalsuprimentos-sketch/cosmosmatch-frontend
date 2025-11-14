@@ -96,7 +96,7 @@ const FeedProgressBars = ({
 }) => {
   return (
     // --- INÍCIO DA CORREÇÃO (Bug do "pisca-pisca") ---
-    // O 'z-index' foi aumentado de 'z-10' para 'z-20'.
+    // O 'z-index' foi aumentado de 'z-10' (no seu ficheiro) para 'z-20'.
     // O Header do Autor (com o nome) está em 'z-10'.
     // Ao definir a barra como 'z-20', garantimos que ela fica
     // sempre POR CIMA do nome, resolvendo o "pisca-pisca".
