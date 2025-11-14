@@ -20,10 +20,8 @@ import {
   useUnlikeGalleryPhoto,
   useCommentOnGalleryPhoto,
 } from '../hooks/useProfile';
-// --- INÍCIO DA ADIÇÃO ---
-import { GalleryCommentSheet } from './GalleryCommentSheet'; // A nossa nova gaveta
+import { GalleryCommentSheet } from './GalleryCommentSheet';
 import { AnimatePresence } from 'framer-motion';
-// --- FIM DA ADIÇÃO ---
 
 interface GalleryPhotoViewerModalProps {
   isOpen: boolean;
@@ -31,7 +29,7 @@ interface GalleryPhotoViewerModalProps {
   photos: ProfilePhoto[];
   startIndex?: number;
   isOwnProfile: boolean;
-  profileUserId: string; 
+  profileUserId: string;
 }
 
 export const GalleryPhotoViewerModal = ({
@@ -47,28 +45,21 @@ export const GalleryPhotoViewerModal = ({
   }
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
-  // --- INÍCIO DA ADIÇÃO ---
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
-  // --- FIM DA ADIÇÃO ---
-  
+
   const { mutate: deletePhotoMutate, isPending: isDeletingPhoto } =
     useDeletePhotoFromGallery();
-    
+
   const { mutate: likePhotoMutate, isPending: isLikingPhoto } =
     useLikeGalleryPhoto(profileUserId);
   const { mutate: unlikePhotoMutate, isPending: isUnlikingPhoto } =
     useUnlikeGalleryPhoto(profileUserId);
-  
-  // O hook de comentar não é mais usado aqui, mas sim dentro do 'GalleryCommentSheet'
-  // const { mutate: commentPhotoMutate, isPending: isCommentingPhoto } =
-  //   useCommentOnGalleryPhoto(profileUserId); // <-- REMOVIDO DAQUI
 
   useEffect(() => {
     if (isOpen) {
       const newIndex = Math.max(0, Math.min(startIndex, photos.length - 1));
       setCurrentIndex(newIndex);
     } else {
-      // Se o modal principal fechar, fecha a gaveta de comentários também
       setIsCommentSheetOpen(false);
     }
   }, [isOpen, startIndex, photos]);
@@ -76,13 +67,13 @@ export const GalleryPhotoViewerModal = ({
   const goToPrevious = (event?: MouseEvent) => {
     event?.stopPropagation();
     setCurrentIndex((prevIndex) =>
-      prevIndex > 0 ? prevIndex - 1 : photos.length - 1
+      prevIndex > 0 ? prevIndex - 1 : photos.length - 1,
     );
   };
   const goToNext = (event?: MouseEvent) => {
     event?.stopPropagation();
     setCurrentIndex((prevIndex) =>
-      prevIndex < photos.length - 1 ? prevIndex + 1 : 0
+      prevIndex < photos.length - 1 ? prevIndex + 1 : 0,
     );
   };
 
@@ -94,13 +85,18 @@ export const GalleryPhotoViewerModal = ({
 
   const currentPhoto = photos[currentIndex];
 
-  const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '');
-  const fullImageUrl = currentPhoto ? `${backendBaseUrl}/${currentPhoto.url}` : '';
+  // --- INÍCIO DA CORREÇÃO (Bug do URL Quebrado) ---
+  // O 'backendBaseUrl' foi removido.
+  // A 'currentPhoto.url' já vem completa do Cloudinary (ex: "https://res.cloudinary.com/...")
+  // Não precisamos mais de a prefixar.
+  const placeholderImage = '/placeholder-image.png'; // Um fallback seguro
+  const fullImageUrl = currentPhoto ? currentPhoto.url : placeholderImage;
+  // --- FIM DA CORREÇÃO ---
 
   const handleLikeClick = (event: MouseEvent) => {
     event.stopPropagation();
     if (!currentPhoto || isLikingPhoto || isUnlikingPhoto) return;
-    
+
     if (currentPhoto.isLikedByMe) {
       unlikePhotoMutate(currentPhoto.id);
     } else {
@@ -108,13 +104,11 @@ export const GalleryPhotoViewerModal = ({
     }
   };
 
-  // --- INÍCIO DA ATUALIZAÇÃO ---
   const handleCommentClick = (event: MouseEvent) => {
     event.stopPropagation();
     if (!currentPhoto) return;
     setIsCommentSheetOpen(true); // Abre a gaveta de comentários
   };
-  // --- FIM DA ATUALIZAÇÃO ---
 
   const handleDeleteClick = (event: MouseEvent) => {
     event.stopPropagation();
@@ -145,17 +139,10 @@ export const GalleryPhotoViewerModal = ({
   const likeCount = currentPhoto.likesCount ?? 0;
   const commentCount = currentPhoto.commentsCount ?? 0;
 
-
   return (
-    <> {/* Usamos Fragment para renderizar o Modal E a Gaveta */}
+    <>
       <Transition appear show={isOpen} as={Fragment}>
-        {/* --- INÍCIO DA CORREÇÃO (Workaround do z-index) --- */}
-        {/* Alterado de 'z-50' para 'z-5'
-            Isto força o modal da galeria a ficar *atrás* do modal do paywall (z-10) */}
         <Dialog as="div" className="relative z-5" onClose={onClose}>
-        {/* --- FIM DA CORREÇÃO --- */}
-
-          {/* Overlay (z-index baixo também) */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -168,7 +155,6 @@ export const GalleryPhotoViewerModal = ({
             <div className="fixed inset-0 bg-black bg-opacity-75 z-5" />
           </Transition.Child>
 
-          {/* Conteúdo (z-index maior que o overlay, mas menor que o paywall) */}
           <div className="fixed inset-0 overflow-y-auto z-6">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child
@@ -211,8 +197,15 @@ export const GalleryPhotoViewerModal = ({
                       alt="Foto da galeria"
                       className="w-full h-auto object-cover rounded-lg max-h-[70vh] select-none"
                       onError={(e) => {
-                         console.warn(`Erro ao carregar imagem no modal: ${fullImageUrl}`);
-                         (e.target as HTMLImageElement).alt = 'Erro ao carregar imagem';
+                        console.warn(
+                          `Erro ao carregar imagem no modal: ${fullImageUrl}`,
+                        );
+                        (e.target as HTMLImageElement).alt =
+                          'Erro ao carregar imagem';
+                        // --- INÍCIO DA CORREÇÃO (Fallback) ---
+                        // Se o URL do Cloudinary falhar, tenta o placeholder
+                        (e.target as HTMLImageElement).src = placeholderImage;
+                        // --- FIM DA CORREÇÃO ---
                       }}
                     />
                     {photos.length > 1 && (
@@ -246,7 +239,9 @@ export const GalleryPhotoViewerModal = ({
                     <div className="flex items-center space-x-6">
                       <button
                         onClick={handleLikeClick}
-                        disabled={isLikingPhoto || isUnlikingPhoto || isOwnProfile}
+                        disabled={
+                          isLikingPhoto || isUnlikingPhoto || isOwnProfile
+                        }
                         className={`flex items-center space-x-1 transition-colors disabled:opacity-50 ${
                           currentPhoto.isLikedByMe
                             ? 'text-red-500 hover:text-red-400'
@@ -264,8 +259,7 @@ export const GalleryPhotoViewerModal = ({
                       </button>
 
                       <button
-                        onClick={handleCommentClick} // <-- ATUALIZADO
-                        // disabled={isCommentingPhoto} // <-- REMOVIDO
+                        onClick={handleCommentClick}
                         className="flex items-center space-x-1 text-gray-400 hover:text-blue-500 
                                    transition-colors disabled:opacity-50"
                       >
@@ -292,17 +286,15 @@ export const GalleryPhotoViewerModal = ({
         </Dialog>
       </Transition>
 
-      {/* --- INÍCIO DA ADIÇÃO (Renderização da Gaveta de Comentários) --- */}
       <AnimatePresence>
         {isCommentSheetOpen && currentPhoto && (
           <GalleryCommentSheet
             photoId={currentPhoto.id}
-            photoUserId={profileUserId} // Passa o ID do dono do perfil
+            photoUserId={profileUserId}
             onClose={() => setIsCommentSheetOpen(false)}
           />
         )}
       </AnimatePresence>
-      {/* --- FIM DA ADIÇÃO --- */}
     </>
   );
 };
