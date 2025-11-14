@@ -1,4 +1,6 @@
 // src/features/feed/services/feedApi.ts
+// (COLE ISTO NO SEU ARQUIVO)
+
 import { api } from '@/services/api';
 
 export enum MediaType {
@@ -113,5 +115,17 @@ export const getPostComments = async (postId: string) => {
 export const getPostById = async (postId: string): Promise<PublicPost> => {
   const { data } = await api.get<PublicPost>(`/post/${postId}`);
   return data;
+};
+// --- FIM DA ADIÇÃO ---
+
+// --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+/**
+ * Apaga um post (apenas o dono).
+ */
+export const deletePost = async (
+  postId: string,
+): Promise<{ success: boolean; message: string }> => {
+  const response = await api.delete(`/post/${postId}`);
+  return response.data;
 };
 // --- FIM DA ADIÇÃO ---

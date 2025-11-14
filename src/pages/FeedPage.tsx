@@ -3,7 +3,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGetFeed, useLikePost, useUnlikePost } from '@/features/feed/hooks/useFeed';
+// --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+import { useGetFeed, useLikePost, useUnlikePost, useDeletePost } from '@/features/feed/hooks/useFeed';
+// --- FIM DA ADIÇÃO ---
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaType, FeedPost } from '@/features/feed/services/feedApi';
@@ -16,6 +18,7 @@ import {
   HeartIcon as HeartIconSolid,
   ChatBubbleOvalLeftEllipsisIcon,
   ShareIcon,
+  XMarkIcon, // <-- INÍCIO DA ADIÇÃO (Apagar Post)
 } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,6 +150,10 @@ export function FeedPage() {
 
   const { mutate: likePostMutate, isPending: isLiking } = useLikePost();
   const { mutate: unlikePostMutate, isPending: isUnliking } = useUnlikePost();
+  
+  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+  const { mutate: deletePostMutate, isPending: isDeletingPost } = useDeletePost();
+  // --- FIM DA ADIÇÃO ---
 
   const [currentDeckIndex, setCurrentDeckIndex] = useState(0);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
@@ -155,7 +162,10 @@ export function FeedPage() {
 
   const currentDeckData = feedData?.pages?.[currentDeckIndex];
   const currentPostData = currentDeckData?.posts?.[currentPostIndex];
-  const isLikeActionLoading = isLiking || isUnliking;
+  
+  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+  const isActionLoading = isLiking || isUnliking || isDeletingPost;
+  // --- FIM DA ADIÇÃO ---
 
   // (Handlers de Swipe - Sem alterações)
   const handleSwipeLeft = useCallback(() => {
@@ -250,7 +260,7 @@ export function FeedPage() {
   
   // (Handler de Like - Sem alterações)
   const handleLikeToggle = () => {
-    if (!currentPostData || isLikeActionLoading) return;
+    if (!currentPostData || isActionLoading) return; // <-- Corrigido para 'isActionLoading'
     if (currentPostData.isLikedByMe) {
       unlikePostMutate(currentPostData.id);
     } else {
@@ -328,6 +338,26 @@ export function FeedPage() {
     }
   };
 
+  // --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+  const handleDeletePost = () => {
+    if (!currentPostData || isDeletingPost) return;
+
+    // Usar o 'toast.warning' (do sonner) para confirmação
+    toast.warning('Apagar este post?', {
+      description: 'Esta ação não pode ser desfeita.',
+      action: {
+        label: 'Apagar',
+        onClick: () => deletePostMutate(currentPostData.id),
+      },
+      cancel: {
+        label: 'Cancelar',
+      },
+      duration: 5000, // Dá 5 segundos para decidir
+    });
+  };
+  // --- FIM DA ADIÇÃO ---
+
+
   // (Renderização de Loading/Empty - Sem alterações)
   if (isLoadingFeed) { return <LoadingFeed />; }
   if (isError || !feedData || feedData.pages.length === 0 || !feedData.pages[0] || feedData.pages[0].posts.length === 0) { 
@@ -391,7 +421,7 @@ export function FeedPage() {
               />
             )}
             
-            {/* 3. Header do Autor (Sem alterações) */}
+            {/* 3. Header do Autor (COM O BOTÃO APAGAR) */}
             <div className="pointer-events-none absolute top-6 left-0 right-0 z-10 px-4">
               <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3">
                 <img
@@ -413,6 +443,33 @@ export function FeedPage() {
                 >
                   {authorToDisplay?.name || 'Utilizador'}
                 </span>
+                
+                {/* --- INÍCIO DA ADIÇÃO (Botão Apagar "X") --- */}
+                {/* O 'isOwner' já estava definido e verifica se o user logado é o autor */}
+                {isOwner && (
+                  <button
+                    style={{ pointerEvents: 'auto' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePost(); // Chama a nova função
+                    }}
+                    disabled={isDeletingPost} // Desativa se estiver a apagar
+                    className="p-2 text-gray-400 rounded-full hover:bg-black/50 hover:text-white disabled:opacity-50"
+                    aria-label="Apagar post"
+                  >
+                    {/* Mostra um 'spinner' se estiver a apagar, senão mostra o 'X' */}
+                    {isDeletingPost ? (
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                    ) : (
+                      <XMarkIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
+                {/* --- FIM DA ADIÇÃO --- */}
+                
               </div>
             </div>
 
@@ -449,7 +506,7 @@ export function FeedPage() {
               <button
                 style={{ pointerEvents: 'auto' }}
                 onClick={handleLikeToggle}
-                disabled={isLikeActionLoading}
+                disabled={isActionLoading} // <-- Corrigido para 'isActionLoading'
                 className={`text-white flex flex-col items-center p-2 rounded-full bg-black/40 backdrop-blur-sm transition-colors duration-150 disabled:opacity-50
                   ${
                     !postToDisplay.isLikedByMe ? 'hover:text-red-400' : ''

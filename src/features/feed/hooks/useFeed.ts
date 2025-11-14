@@ -1,4 +1,5 @@
 // src/features/feed/hooks/useFeed.ts
+// (COLE ISTO NO SEU ARQUIVO)
 
 import {
   useInfiniteQuery,
@@ -214,3 +215,28 @@ export const useGetPostComments = (postId: string | null) => {
     enabled: !!postId,
   });
 };
+
+// --- INÍCIO DA ADIÇÃO (Apagar Post) ---
+
+/**
+ * Hook para apagar um post.
+ */
+export const useDeletePost = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // A função 'deletePost' deve ser adicionada ao 'feedApi.ts'
+    mutationFn: (postId: string) => feedApi.deletePost(postId),
+    onSuccess: (data, postId) => {
+      toast.success(data.message || 'Post apagado com sucesso!');
+      
+      // Invalidar o feed para forçar o refetch e
+      // fazer o post "sumir" da UI.
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+    onError: (error: any, postId) => {
+      console.error(`Erro ao apagar o post ${postId}:`, error);
+      toast.error(error?.response?.data?.message || 'Não foi possível apagar o post.');
+    },
+  });
+};
+// --- FIM DA ADIÇÃO ---
