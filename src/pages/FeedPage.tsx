@@ -1,9 +1,7 @@
-// src/pages/FeedPage.tsx
+// frontend/src/pages/FeedPage.tsx
 // (COLE ISTO NO SEU ARQUIVO)
 
-// --- INÍCIO DA CORREÇÃO ---
-import { useState, useEffect, useCallback } from 'react'; // 'memo' já não é necessário aqui
-// --- FIM DA CORREÇÃO ---
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGetFeed, useLikePost, useUnlikePost } from '@/features/feed/hooks/useFeed';
 import { useSwipeable } from 'react-swipeable';
@@ -25,14 +23,8 @@ import {
   useGetFollowing,
   useFollowUser,
   useUnfollowUser,
-  // O 'useGetPersonalDayVibration' já não é chamado aqui
 } from '@/features/profile/hooks/useProfile';
-
-// --- INÍCIO DA CORREÇÃO (Importar Card Fixo) ---
-// Importamos o componente isolado que acabámos de criar
 import { PersonalDayCard } from '@/features/feed/components/PersonalDayCard';
-// --- FIM DA CORREÇÃO ---
-
 
 // (Componente de Loading - Sem alterações)
 const LoadingFeed = () => (
@@ -136,11 +128,8 @@ const FeedProgressBars = ({
   );
 };
 
-// --- INÍCIO DA REMOÇÃO ---
-// Toda a lógica do PersonalDayCard (constantes e componente)
-// foi movida para o seu próprio ficheiro.
-// --- FIM DA REMOÇÃO ---
-
+// (Resto do ficheiro FeedPage.tsx - sem mais alterações)
+// ... (o restante do código que você colou está correto e permanece igual) ...
 
 export function FeedPage() {
   const PHOTO_DURATION_SECONDS = 5; 
@@ -358,28 +347,12 @@ export function FeedPage() {
    const postToDisplay = currentDeckData.posts[currentPostIndex];
    const authorToDisplay = currentDeckData.author;
    
-   // --- INÍCIO DA CORREÇÃO (Bug do localhost no Feed) ---
-   // Removidas as constantes 'apiUrl', 'backendOrigin' e a função 'toPublicUrl'
-   // Elas estavam a adicionar um prefixo quebrado aos URLs do Cloudinary.
-   /*
-   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-   const backendOrigin = apiUrl.replace(/\/api\/?$/, ''); 
-   const toPublicUrl = (p?: string | null) =>
-     !p ? undefined :
-     /^https?:\/\//i.test(p) ? p : `${backendOrigin}/${p}`;
-   */
-   
-   // Definimos os fallbacks
+   // (Lógica de URL da imagem - Sem alterações, já estava correta)
    const defaultAvatar = '/default-avatar.png';
    const placeholderImage = '/placeholder-image.png';
-
-   // Usamos o 'imageUrl' diretamente, pois ele já é o URL completo do Cloudinary.
-   // Se for nulo ou 'undefined', usamos o 'defaultAvatar'.
    const authorAvatarUrl = authorToDisplay?.profile?.imageUrl ?? defaultAvatar;
-   
-   // O mesmo para a mídia do post.
    const postMediaUrl = postToDisplay?.imageUrl ?? placeholderImage;
-   // --- FIM DA CORREÇÃO ---
+   // --- FIM DA LÓGICA ---
 
    const activePostDuration = 
      (postToDisplay.mediaType === MediaType.VIDEO && postToDisplay.videoDuration)
