@@ -1,13 +1,14 @@
 // src/components/layout/AppLayout.tsx
+// (COLE ISTO NO SEU ARQUIVO)
 
 import { Outlet } from 'react-router-dom';
 import { TabBar } from './TabBar'; 
-// --- TODOS OS IMPORTS DO MODAL FORAM REMOVIDOS ---
-// (useState, useEffect, Fragment, Dialog, Transition, SparklesIcon, useNavigate)
+// --- INÍCIO DA ADIÇÃO (Toaster) ---
+// 1. Importar o componente Toaster da biblioteca sonner
+import { Toaster } from 'sonner';
+// --- FIM DA ADIÇÃO ---
 
 export function AppLayout() {
-  // --- TODO O CÓDIGO DO MODAL FOI REMOVIDO ---
-  // (useState, useNavigate, handleUpgradeClick, handleCloseModal, useEffect)
 
   return (
     // --- 'relative z-0' REMOVIDO ---
@@ -24,8 +25,12 @@ export function AppLayout() {
         <TabBar />
       </div>
 
-      {/* --- TODO O JSX DO MODAL FOI REMOVIDO --- */}
-      {/* (O <Transition appear show={isPaywallOpen} ...> foi apagado) */}
+      {/* --- INÍCIO DA ADIÇÃO (Toaster) --- */}
+      {/* 2. Adicionar o componente Toaster aqui. */}
+      {/* Ele vai apanhar todas as chamadas 'toast()' da aplicação. */}
+      {/* Usamos 'richColors' e 'dark' para o tema escuro. */}
+      <Toaster richColors theme="dark" position="bottom-center" />
+      {/* --- FIM DA ADIÇÃO --- */}
     </div>
   );
 }
