@@ -147,7 +147,8 @@ export function DiscoveryPage() {
     triggerSearch(citySearch);
   };
 
-  // --- INÍCIO DA CORREÇÃO (Bug do Botão) ---
+  // --- INÍCIO DA CORREÇÃO (Bug do Botão) --- 
+  // (Este bloco abaixo estava no ficheiro que você mandou, mantive-o)
   // A função que é chamada quando o usuário clica numa sugestão
   const handleSuggestionClick = (suggestion: string) => {
     // 1. Parar de buscar mais sugestões
@@ -203,12 +204,17 @@ export function DiscoveryPage() {
         <div className="flex flex-col h-full items-center justify-center text-center text-gray-400 p-4">
           <h2 className="text-xl font-semibold mb-3 text-white">Seu perfil está incompleto</h2>
           <p className="mb-6">Complete seu perfil para usar a descoberta.</p>
+          
+          {/* --- INÍCIO DA CORREÇÃO (Bug do Botão de Perfil Incompleto) ---
+            A rota foi alterada de '/onboarding/profile' para '/profile/edit'
+          */}
           <button
             className="bg-indigo-600 text-white px-6 py-2 rounded-full font-bold"
-            onClick={() => navigate('/onboarding/profile')} 
+            onClick={() => navigate('/profile/edit')} 
           >
             Completar perfil
           </button>
+          {/* --- FIM DA CORREÇÃO --- */}
         </div>
       );
     }
