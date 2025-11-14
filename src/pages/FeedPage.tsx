@@ -92,7 +92,7 @@ const PostMedia = ({ post, url }: { post: FeedPost, url: string }) => {
 };
 
 
-// (Componente FeedProgressBars - Sem alterações)
+// (Componente FeedProgressBars - CORRIGIDO)
 const FeedProgressBars = ({
   total,
   current,
@@ -103,7 +103,13 @@ const FeedProgressBars = ({
   duration: number;
 }) => {
   return (
-    <div className="absolute top-3 left-0 right-0 z-10 flex gap-1 pointer-events-none px-4">
+    // --- INÍCIO DA CORREÇÃO (Bug do "pisca-pisca") ---
+    // O 'z-index' foi aumentado de 'z-10' para 'z-20'.
+    // O Header do Autor (com o nome) está em 'z-10'.
+    // Ao definir a barra como 'z-20', garantimos que ela fica
+    // sempre POR CIMA do nome, resolvendo o "pisca-pisca".
+    <div className="absolute top-3 left-0 right-0 z-20 flex gap-1 pointer-events-none px-4">
+    {/* --- FIM DA CORREÇÃO --- */}
       {Array.from({ length: total }).map((_, idx) => {
         const isActive = idx === current;
         const isPast = idx < current;
