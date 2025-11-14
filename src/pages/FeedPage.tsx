@@ -352,14 +352,29 @@ export function FeedPage() {
    const postToDisplay = currentDeckData.posts[currentPostIndex];
    const authorToDisplay = currentDeckData.author;
    
+   // --- INÍCIO DA CORREÇÃO (Bug do localhost no Feed) ---
+   // Removidas as constantes 'apiUrl', 'backendOrigin' e a função 'toPublicUrl'
+   // Elas estavam a adicionar um prefixo quebrado aos URLs do Cloudinary.
+   /*
    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
    const backendOrigin = apiUrl.replace(/\/api\/?$/, ''); 
-   const defaultAvatar = '/default-avatar.png';
    const toPublicUrl = (p?: string | null) =>
      !p ? undefined :
      /^https?:\/\//i.test(p) ? p : `${backendOrigin}/${p}`;
-   const authorAvatarUrl = toPublicUrl(authorToDisplay?.profile?.imageUrl) ?? defaultAvatar;
-   const postMediaUrl = toPublicUrl(postToDisplay?.imageUrl) ?? '/placeholder-image.png';
+   */
+   
+   // Definimos os fallbacks
+   const defaultAvatar = '/default-avatar.png';
+   const placeholderImage = '/placeholder-image.png';
+
+   // Usamos o 'imageUrl' diretamente, pois ele já é o URL completo do Cloudinary.
+   // Se for nulo ou 'undefined', usamos o 'defaultAvatar'.
+   const authorAvatarUrl = authorToDisplay?.profile?.imageUrl ?? defaultAvatar;
+   
+   // O mesmo para a mídia do post.
+   const postMediaUrl = postToDisplay?.imageUrl ?? placeholderImage;
+   // --- FIM DA CORREÇÃO ---
+
    const activePostDuration = 
      (postToDisplay.mediaType === MediaType.VIDEO && postToDisplay.videoDuration)
        ? postToDisplay.videoDuration

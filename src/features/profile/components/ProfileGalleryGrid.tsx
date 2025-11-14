@@ -1,4 +1,5 @@
 // src/features/profile/components/ProfileGalleryGrid.tsx
+// (COLE ISTO NO SEU ARQUIVO)
 
 import { PlusIcon } from '@heroicons/react/24/solid';
 // --- INÍCIO DA ADIÇÃO (Likes) ---
@@ -40,7 +41,11 @@ export const ProfileGalleryGrid = ({
   onPhotoClick,
 }: ProfileGalleryGridProps) => {
 
-  const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '');
+  // --- INÍCIO DA CORREÇÃO (Bug do localhost na Galeria) ---
+  // A constante backendBaseUrl foi REMOVIDA. Ela estava a causar o bug
+  // ao adicionar o URL do Render ao URL do Cloudinary.
+  // const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', ''); // <-- REMOVIDO
+  // --- FIM DA CORREÇÃO ---
 
   // --- INÍCIO DA ADIÇÃO (Hooks de Like) ---
   // Passamos o 'profileUserId' para que os hooks saibam qual query
@@ -92,7 +97,13 @@ export const ProfileGalleryGrid = ({
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {photos.map((photo, index) => { // O 'index' já estava disponível aqui
-            const fullImageUrl = `${backendBaseUrl}/${photo.url}`;
+            
+            // --- INÍCIO DA CORREÇÃO (Bug do localhost na Galeria) ---
+            // Usamos photo.url diretamente, pois ele já é o URL
+            // completo do Cloudinary (ex: "https://res.cloudinary.com/...")
+            const fullImageUrl = photo.url; // <-- CORRIGIDO
+            // --- FIM DA CORREÇÃO ---
+
             return (
               <div
                 key={photo.id}
