@@ -2,10 +2,7 @@
 // (COLE ISTO NO SEU ARQUIVO)
 
 import { useState, useEffect, useRef } from 'react';
-// --- INÍCIO DA REMOÇÃO ---
-// Removidos 'Link' e 'useAuth'
 import { useNavigate } from 'react-router-dom';
-// --- FIM DA REMOÇÃO ---
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMyProfile, useUpdateProfile, useUpdateAvatar } from '../hooks/useProfile';
 import type { UpdateProfileDto } from '@/types/profile.types';
@@ -15,9 +12,10 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { Modal } from '@/components/common/Modal';
 import { toast } from '@/lib/toast';
 
-// --- INÍCIO DA ADIÇÃO (Ideia 1: Ícone de Tooltip) ---
-import { InformationCircleIcon } from '@heroicons/react/24/solid';
-// --- FIM DA ADIÇÃO ---
+// --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+// Adicionamos o ícone de cadeado para o campo CPF
+import { InformationCircleIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+// --- FIM DA CORREÇÃO ---
 
 // (Componente Loader, libraries, getCroppedImg - mantidos intactos)
 const Loader = () => <div className="text-center p-4 text-white">A carregar formulário...</div>;
@@ -66,10 +64,6 @@ export const EditProfileForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  // --- INÍCIO DA REMOÇÃO (Lógica de Logout) ---
-  // Removido const { logout } = useAuth();
-  // --- FIM DA REMOÇÃO ---
-
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries,
@@ -79,16 +73,20 @@ export const EditProfileForm = () => {
   const { mutate: updateProfileMutate, isPending: isUpdatingProfile } = useUpdateProfile();
   const { mutate: updateAvatarMutate, isPending: isUpdatingAvatar } = useUpdateAvatar();
 
-  // (Toda a sua lógica de estados - mantida intacta)
+  // (Estados)
   const [birthDate, setBirthDate] = useState('');
   const [birthCity, setBirthCity] = useState('');
   const [birthTime, setBirthTime] = useState('');
-  // --- INÍCIO DA ADIÇÃO (Ideia 1: Estado do Nome de Nascimento) ---
   const [fullNameBirth, setFullNameBirth] = useState('');
-  // --- FIM DA ADIÇÃO ---
   const [currentCity, setCurrentCity] = useState('');
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NON_BINARY' | 'OTHER' | ''>('');
   const [bio, setBio] = useState('');
+
+  // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+  const [cpfCnpj, setCpfCnpj] = useState(''); // 1. Adicionar novo estado
+  // --- FIM DA CORREÇÃO ---
+  
+  // (Estados do Avatar)
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState<Crop>();
@@ -101,33 +99,31 @@ export const EditProfileForm = () => {
   const birthCityAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const currentCityAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  // (Toda a sua lógica de `useEffect` e handlers - mantida intacta)
+  // (useEffect - Carregar dados)
   useEffect(() => {
     if (profile) {
       const formattedBirthDate = profile.birthDate ? profile.birthDate.split('T')[0] : '';
       setBirthDate(formattedBirthDate);
       setBirthCity(profile.birthCity || '');
       setBirthTime(profile.birthTime?.substring(0, 5) || '');
-      // --- INÍCIO DA ADIÇÃO (Ideia 1: Carregar Nome de Nascimento) ---
       setFullNameBirth(profile.fullNameBirth || '');
-      // --- FIM DA ADIÇÃO ---
       setCurrentCity(profile.currentCity || '');
       setGender((profile.gender as any) || '');
       setBio(profile.bio || '');
 
-      // --- INÍCIO DA CORREÇÃO (Bug do localhost ao carregar) ---
-      // O profile.imageUrl (do Cloudinary) já é um URL completo.
-      // Não precisamos mais do backendUrl aqui.
+      // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+      setCpfCnpj(profile.cpfCnpj || ''); // 2. Carregar o CPF/CNPJ
+      // --- FIM DA CORREÇÃO ---
+
       if (profile.imageUrl && !pendingAvatar) {
-        // const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // <-- REMOVIDO
-        setAvatarPreview(profile.imageUrl); // <-- CORRIGIDO
+        setAvatarPreview(profile.imageUrl);
       } else if (!profile.imageUrl && !pendingAvatar) {
          setAvatarPreview(null);
       }
-      // --- FIM DA CORREÇÃO ---
     }
   }, [profile, pendingAvatar]);
 
+  // (handlers do Avatar - sem alterações)
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -142,6 +138,7 @@ export const EditProfileForm = () => {
     }
   };
 
+  // (handlers do Autocomplete - sem alterações)
   const onBirthCityLoad = (autocomplete: google.maps.places.Autocomplete) => { birthCityAutocompleteRef.current = autocomplete; };
   const onBirthCityPlaceChanged = () => {
     if (birthCityAutocompleteRef.current) {
@@ -157,6 +154,7 @@ export const EditProfileForm = () => {
     }
   };
 
+  // (handler de Submit - ATUALIZADO)
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -167,16 +165,18 @@ export const EditProfileForm = () => {
 
     const finalBirthCity = (document.getElementById('birthCity') as HTMLInputElement)?.value || birthCity;
     const finalCurrentCity = (document.getElementById('currentCity') as HTMLInputElement)?.value || currentCity;
+    
     const profileData: UpdateProfileDto = {
       birthDate: birthDate || undefined, 
       birthCity: finalBirthCity || undefined,
       birthTime: birthTime || undefined,
-      // --- INÍCIO DA ADIÇÃO (Ideia 1: Enviar Nome de Nascimento) ---
       fullNameBirth: fullNameBirth || undefined,
-      // --- FIM DA ADIÇÃO ---
       currentCity: finalCurrentCity || undefined,
       gender: gender || undefined, 
       bio: bio || undefined,
+      // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+      cpfCnpj: cpfCnpj || undefined, // 3. Adicionar o CPF/CNPJ ao DTO de envio
+      // --- FIM DA CORREÇÃO ---
     };
 
     updateProfileMutate(profileData, {
@@ -190,15 +190,9 @@ export const EditProfileForm = () => {
             onSuccess: (updatedProfileWithAvatar) => {
               console.log('Avatar enviado com sucesso.');
               setPendingAvatar(null); 
-              
-              // --- INÍCIO DA CORREÇÃO (Bug do localhost ao salvar) ---
-              // O imageUrl (do Cloudinary) já é um URL completo.
               if (updatedProfileWithAvatar.imageUrl) {
-                 // const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // <-- REMOVIDO
-                 setAvatarPreview(updatedProfileWithAvatar.imageUrl); // <-- CORRIGIDO
+                 setAvatarPreview(updatedProfileWithAvatar.imageUrl);
               }
-              // --- FIM DA CORREÇÃO ---
-
               queryClient.invalidateQueries({ queryKey: ['myProfile'] });
               console.log("Perfil e Avatar salvos. Navegando para /discovery...");
               navigate('/discovery', { replace: true });
@@ -209,7 +203,7 @@ export const EditProfileForm = () => {
           });
         } else {
            console.log("Nenhum avatar pendente. Verificando perfil para navegação...");
-           // --- ALTERAÇÃO: Verificação do perfil completo (incluindo fullNameBirth) ---
+           // (Verificação do perfil completo - sem alteração)
            if (updatedProfileData.birthDate && updatedProfileData.birthTime && updatedProfileData.birthCity && updatedProfileData.fullNameBirth) {
               console.log("Perfil completo. Navegando para /discovery...");
               navigate('/discovery', { replace: true });
@@ -224,6 +218,7 @@ export const EditProfileForm = () => {
     });
   };
 
+  // (handlers de Corte - sem alterações)
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     imgRef.current = e.currentTarget;
     const { width, height } = e.currentTarget;
@@ -257,26 +252,17 @@ export const EditProfileForm = () => {
     }
   };
 
-  // --- INÍCIO DA REMOÇÃO (Handler de Logout) ---
-  // Removido 'handleLogout'
-  // --- FIM DA REMOÇÃO ---
-
-
   // (Lógica de loading/erro - mantida intacta)
   const isProfileNotFoundError = (profileError as any)?.response?.status === 404;
-
   if (loadError) {
     return <div className="text-red-500 p-4">Erro ao carregar Google Maps API. Verifique a chave.</div>;
   }
-  
   if (profileError && !isProfileNotFoundError) {
     return <div className="text-red-500 p-4">Erro ao carregar dados do perfil. Tente recarregar.</div>;
   }
-  
   if (!isLoaded || (isProfileLoading && !isProfileNotFoundError)) {
     return <Loader />;
   }
-  
   const displayAvatar = avatarPreview; 
 
   return (
@@ -296,17 +282,8 @@ export const EditProfileForm = () => {
             />
           ) : (
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-indigo-500 bg-gray-700 flex items-center justify-center">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="w-10 h-10 md:w-12 md:h-12 text-gray-500" 
-                viewBox="0 0 20 20" 
-                fill="currentColor"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" 
-                  clipRule="evenodd" 
-                />
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 md:w-12 md:h-12 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
           )}
@@ -316,7 +293,7 @@ export const EditProfileForm = () => {
           <input ref={avatarFileInputRef} id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarFileChange} disabled={isUpdatingAvatar || isUpdatingProfile} className="hidden"/>
         </div>
 
-        {/* (Formulário - Sem alterações) */}
+        {/* (Formulário) */}
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* (Campos de Data, Cidade, Hora - Sem alterações) */}
           <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
@@ -340,16 +317,10 @@ export const EditProfileForm = () => {
           <div className="w-full">
             <label htmlFor="fullNameBirth" className="flex items-center text-sm font-medium text-gray-300">
               <span>Nome Completo de Nascimento *</span>
-              {/* Tooltip Icon */}
               <span className="group relative ml-1.5">
                 <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-pointer" />
-                <span 
-                  className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-white bg-gray-900 border border-gray-600 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ transform: 'translateX(-50%)' }}
-                >
-                  Por favor, insira o nome exato da sua certidão de nascimento. 
-                  Usamos este dado *apenas* para calcular os seus números (Expressão, Alma). 
-                  Este nome <strong>não</strong> será público.
+                <span className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-white bg-gray-900 border border-gray-600 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+                  Por favor, insira o nome exato da sua certidão de nascimento. Usamos este dado *apenas* para calcular os seus números (Expressão, Alma). Este nome <strong>não</strong> será público.
                 </span>
               </span>
             </label>
@@ -380,26 +351,51 @@ export const EditProfileForm = () => {
             </div>
           </div>
           
-          {/* --- INÍCIO DA CORREÇÃO 1 --- */}
+          {/* --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) --- */}
+          {/* 4. Adicionar o novo campo de input para CPF/CNPJ */}
+          <div className="w-full border-t border-gray-700 pt-4">
+            <label htmlFor="cpfCnpj" className="flex items-center text-sm font-medium text-gray-300">
+              <LockClosedIcon className="w-4 h-4 text-yellow-400 mr-1.5" />
+              <span>CPF / CNPJ (Para Pagamentos) *</span>
+              
+              <span className="group relative ml-1.5">
+                <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-pointer" />
+                <span 
+                  className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-white bg-gray-900 border border-gray-600 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  Para gerar o PIX, o nosso parceiro de pagamentos (Asaas)
+                  exige um CPF ou CNPJ. Este dado é usado <strong>apenas</strong> para
+                  o pagamento e <strong>não</strong> será público no seu perfil.
+                </span>
+              </span>
+            </label>
+            <input
+              id="cpfCnpj"
+              type="text"
+              value={cpfCnpj}
+              onChange={(e) => setCpfCnpj(e.target.value)}
+              required
+              className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Digite apenas os números"
+            />
+          </div>
+          {/* --- FIM DA CORREÇÃO --- */}
+
+
+          {/* (Campo Bio - Sem alterações) */}
           <div>
             <label htmlFor="bio" className="block text-sm font-medium text-gray-300">Sobre mim (Bio)</label>
             <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={2} className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 resize-none" placeholder="Conte um pouco sobre você... (opcional)"/>
           </div>
-          {/* --- FIM DA CORREÇÃO 1 --- */}
 
-          {/* --- INÍCIO DA CORREÇÃO 2 --- */}
+          {/* (Botão Salvar - Sem alterações) */}
           <div className="pt-2">
             <button type="submit" disabled={isUpdatingProfile || isUpdatingAvatar} className="w-full px-4 py-2 font-semibold text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {(isUpdatingProfile || isUpdatingAvatar) ? 'A salvar...' : 'Salvar Perfil'}
             </button>
           </div>
-          {/* --- FIM DA CORREÇÃO 2 --- */}
         </form>
-
-        {/* --- INÍCIO DA REMOÇÃO (Links de Configuração) --- */}
-        {/* Removida a secção de links 'border-t' */}
-        {/* --- FIM DA REMOÇÃO --- */}
-
       </div>
 
       {/* (Modal de Corte - Sem alterações) */}

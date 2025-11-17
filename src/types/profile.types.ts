@@ -1,9 +1,7 @@
 // src/types/profile.types.ts
+// (COLE ISTO NO SEU ARQUIVO)
 
 // Este ficheiro espelha os DTOs e Modelos do Profile no backend
-
-// --- INÍCIO DA ALTERAÇÃO 1: DEFINIR NOVOS TIPOS DE MAPA ASTRAL ---
-// Estes tipos espelham as interfaces FullNatalChart do backend
 
 export interface PlanetPosition {
   name: string;
@@ -24,34 +22,27 @@ export interface FullNatalChart {
   planets: PlanetPosition[];
   houses: HouseCusp[];
 }
-// --- FIM DA ALTERAÇÃO 1 ---
 
-// --- INÍCIO DA ADIÇÃO (Ação 3: Tipos das Cartas) ---
-/**
- * Define a estrutura de uma "Carta de Poder" ou "Medalha Astrológica"
- * que vem do backend (de astrology.service.ts)
- */
 export interface PowerAspect {
   id: string; // ex: "SOL_CASA_10"
   title: string; // ex: "O Estratega de Carreira"
   description: string;
   icon: string; // ex: "briefcase"
 }
-// --- FIM DA ADIÇÃO ---
 
 // O que enviamos para PATCH /profile
 export interface UpdateProfileDto {
   birthDate?: string;
   birthCity?: string;
   birthTime?: string; // Formato "HH:MM"
-  
-  // --- INÍCIO DA ADIÇÃO (Ideia 1: Numerologia) ---
   fullNameBirth?: string;
-  // --- FIM DA ADIÇÃO ---
-  
   currentCity?: string;
   gender?: 'MALE' | 'FEMALE' | 'NON_BINARY' | 'OTHER';
   bio?: string;
+  
+  // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+  cpfCnpj?: string; // Adicionado para corresponder ao schema.prisma
+  // --- FIM DA CORREÇÃO ---
 }
 
 // Tipo para uma Conexão individual (baseado no seu ficheiro antigo)
@@ -76,22 +67,17 @@ export interface Profile {
   birthDate: string | null;
   birthCity: string | null;
   birthTime: string | null;
-
-  // --- INÍCIO DA ADIÇÃO (Ideia 1: Numerologia) ---
   fullNameBirth: string | null;
-  // --- FIM DA ADIÇÃO ---
-
   currentCity: string | null;
   gender: string | null;
   bio: string | null;
   imageUrl: string | null; // Avatar
   
-  // --- INÍCIO DA ALTERAÇÃO 2: ATUALIZAR INTERFACE DO PERFIL ---
-  // O natalChart agora usa a nossa nova interface completa
+  // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
+  cpfCnpj: string | null; // Adicionado para corresponder ao schema.prisma
+  // --- FIM DA CORREÇÃO ---
+
   natalChart: FullNatalChart | null;
-  
-  // --- INÍCIO DA ALTERAÇÃO (Ideia 1: Mapa Numerológico Completo) ---
-  // O numerologyMap agora espelha o backend (5 números)
   numerologyMap: {
     lifePathNumber: number | null;
     expressionNumber: number | null;
@@ -99,11 +85,7 @@ export interface Profile {
     personalityNumber: number | null;
     birthdayNumber: number | null;
   } | null;
-  // --- FIM DA ALTERAÇÃO ---
-
-  // --- INÍCIO DA ADIÇÃO (Ação 3: Campo das Cartas) ---
   powerAspects: PowerAspect[] | null;
-  // --- FIM DA ADIÇÃO ---
   
   connections?: Connection[]; 
 }
