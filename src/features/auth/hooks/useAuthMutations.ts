@@ -1,4 +1,6 @@
 // frontend/src/features/auth/hooks/useAuthMutations.ts
+// (COLE ISTO NO SEU ARQUIVO)
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,9 +14,7 @@ import {
   ResetPasswordDto,
   UpdateUnverifiedEmailDto, // <-- Isto está correto (vem de auth.types.ts)
 } from '@/types/auth.types';
-// --- INÍCIO DA ADIÇÃO (Fase 2.1: Erro no Campo) ---
 import type { UseFormSetError } from 'react-hook-form';
-// --- FIM DA ADIÇÃO ---
 import { toast } from '@/lib/toast';
 import { api } from '@/services/api';
 
@@ -37,16 +37,13 @@ const useGetProfile = () => {
 /**
  * Hook para a mutação de REGISTO
  */
-// --- INÍCIO DA ATUALIZAÇÃO (Fase 2.1: Erro no Campo) ---
-// 1. O hook agora aceita 'setError' como argumento
 export const useRegister = (options: {
   setError: UseFormSetError<RegisterDto>;
 }) => {
-  const { setError } = options; // <-- Extraímos a função
-  // --- FIM DA ATUALIZAÇÃO ---
+  // ... (sem alterações - esta parte já estava correta)
+  const { setError } = options; 
 
   const { setUser } = useAuth();
-  // const getProfileMutation = useGetProfile(); // <-- Não precisamos mais disto aqui
   const navigate = useNavigate();
 
   return useMutation({
@@ -61,18 +58,10 @@ export const useRegister = (options: {
         setUser(data.user);
         console.log('[useRegister] Utilizador definido no AuthContext.');
 
-        // --- INÍCIO DA CORREÇÃO (Fluxo de Verificação) ---
-        // Em vez de verificar o perfil e navegar para /discovery ou /profile/edit,
-        // vamos SEMPRE navegar para a página de verificação primeiro.
-        // A página 'PleaseVerifyPage' é que vai ter o botão "Continuar"
-        // que leva o utilizador para o onboarding (/onboarding-profile).
-
         console.log(
           '[useRegister] Redirecionando para /please-verify (Nova Lógica)',
         );
-        navigate('/please-verify'); // <-- ESTA É A CORREÇÃO
-
-        // --- FIM DA CORREÇÃO (Fluxo de Verificação) ---
+        navigate('/please-verify'); 
 
       } catch (error) {
         console.error('[useRegister] Erro no fluxo de onSuccess:', error);
@@ -82,24 +71,19 @@ export const useRegister = (options: {
         navigate('/login');
       }
     },
-    // --- INÍCIO DA ATUALIZAÇÃO (Fase 2.1: Erro no Campo) ---
-    // 2. O 'onError' agora usa o 'setError'
     onError: (error: any) => {
       const message =
         error.response?.data?.message || 'Erro ao tentar registar.';
       console.error('[useRegister] Erro no registo:', message);
 
-      // 3. Mostra o "popup do windows" (como você gosta)
       toast.error(message);
 
-      // 4. E TAMBÉM define o erro no campo correto do formulário
       if (message.toLowerCase().includes('utilizador')) {
         setError('username', { type: 'server', message: message });
       } else if (message.toLowerCase().includes('email')) {
         setError('email', { type: 'server', message: message });
       }
     },
-    // --- FIM DA ATUALIZAÇÃO ---
   });
 };
 
@@ -107,35 +91,35 @@ export const useRegister = (options: {
  * Hook para a mutação de LOGIN
  */
 export const useLogin = () => {
-  // ... (sem alterações)
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const getProfileMutation = useGetProfile();
 
   return useMutation({
     mutationFn: (data: LoginDto) => authApi.login(data),
+
+    // --- INÍCIO DA CORREÇÃO (A "Confusão") ---
     onSuccess: async (data: AuthResponse) => {
+      // 1. Definimos o token e o utilizador IMEDIATAMENTE.
+      // O 'user' do contexto é necessário para a 'PleaseVerifyPage'
+      localStorage.setItem('cosmosmatch_token', data.accessToken);
+      setUser(data.user);
+      console.log('[useLogin] Login OK. Token e Utilizador definidos no contexto.');
+
       try {
-        localStorage.setItem('cosmosmatch_token', data.accessToken);
-
-        console.log('[useLogin] Login bem-sucedido. A buscar perfil completo...');
+        // 2. Tentamos buscar o perfil completo.
+        //    (Isto VAI falhar com 403 se o user não estiver verificado)
+        console.log('[useLogin] A tentar buscar perfil completo...');
         const profile = await getProfileMutation.mutateAsync();
-        console.log('[useLogin] Perfil encontrado:', profile);
+        console.log('[useLogin] Perfil encontrado (utilizador verificado):', profile);
 
-        setUser(data.user);
-
+        // 3. Se passou, o utilizador está VERIFICADO.
+        //    (Segue o fluxo normal)
         const isProfileComplete =
           profile.birthDate &&
           profile.birthTime &&
           profile.birthCity &&
           profile.gender;
-
-        console.log('[useLogin] Verificando perfil para redirecionamento:', {
-          birthDate: !!profile.birthDate,
-          birthTime: !!profile.birthTime,
-          birthCity: !!profile.birthCity,
-          gender: !!profile.gender,
-        });
 
         if (isProfileComplete) {
           console.log(
@@ -148,12 +132,28 @@ export const useLogin = () => {
           );
           navigate('/profile/edit');
         }
-      } catch (error) {
-        console.error('[useLogin] Erro no fluxo de onSuccess:', error);
-        toast.error('Login bem-sucedido, mas falha ao carregar o seu perfil.');
-        navigate('/login');
+
+      } catch (error: any) {
+        // 4. Se falhou, verificamos PORQUÊ.
+        const status = error.response?.status;
+        const message = error.response?.data?.message || '';
+        
+        // 5. Se for o Erro 403 de verificação, é ESPERADO.
+        //    NÃO mostramos um alerta. O 'api.ts' (interceptor)
+        //    já está a tratar do redirecionamento para /please-verify.
+        if (status === 403 && message.includes('verifique o seu email')) {
+          console.warn('[useLogin] Erro 403 (verificação) esperado. Interceptor vai redirecionar.');
+          // Não fazemos nada. O utilizador será redirecionado.
+        } else {
+          // 6. Se for qualquer OUTRO erro (500, 404, etc.), aí sim
+          //    é um erro real e mostramos o alerta.
+          console.error('[useLogin] Erro inesperado no fluxo de onSuccess:', error);
+          toast.error('Login bem-sucedido, mas falha ao carregar o seu perfil.');
+          navigate('/login');
+        }
       }
     },
+    // --- FIM DA CORREÇÃO ---
     onError: (error: any) => {
       const message =
         error.response?.data?.message || 'Email ou password inválidos.';
@@ -204,20 +204,19 @@ export const useResetPassword = () => {
   });
 };
 
-// --- INÍCIO DA ADIÇÃO (Fase 3: Verificação de Email) ---
 /**
  * Hook para a mutação de VERIFY EMAIL (Clicar no link)
  */
 export const useVerifyEmail = () => {
+  // ... (sem alterações)
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const getProfileMutation = useGetProfile(); // Reutiliza a lógica de buscar perfil
+  const getProfileMutation = useGetProfile(); 
 
   return useMutation({
     mutationFn: (token: string) => authApi.verifyEmail(token),
 
     onSuccess: async (data: AuthResponse) => {
-      // Esta lógica é uma cópia do onSuccess do useLogin/useRegister
       try {
         localStorage.setItem('cosmosmatch_token', data.accessToken);
         console.log('[useVerifyEmail] Token salvo no localStorage.');
@@ -265,13 +264,12 @@ export const useVerifyEmail = () => {
     },
   });
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Fase 3.1: Reenviar Verificação) ---
 /**
  * Hook para a mutação de RESEND VERIFICATION EMAIL (Botão na página de bloqueio)
  */
 export const useResendVerificationEmail = () => {
+  // ... (sem alterações)
   return useMutation({
     mutationFn: () => authApi.resendVerificationEmail(),
     onSuccess: (data) => {
@@ -285,28 +283,20 @@ export const useResendVerificationEmail = () => {
     },
   });
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Solução: Corrigir Email) ---
 /**
  * Hook para a mutação de UPDATE UNVERIFIED EMAIL (Corrigir email)
  */
 export const useUpdateUnverifiedEmail = () => {
-  const { user, setUser } = useAuth(); // Puxa o user e o setUser do contexto
+  // ... (sem alterações)
+  const { user, setUser } = useAuth(); 
 
   return useMutation({
-    // 'variables' é o objeto (DTO) que passamos para 'correctEmail()'
     mutationFn: (variables: UpdateUnverifiedEmailDto) =>
       authApi.updateUnverifiedEmail(variables),
 
     onSuccess: (data, variables) => {
-      // 'data' é a resposta da API ({ message: "..." })
-      // 'variables' é o que enviámos ({ newEmail: "...", password: "..." })
-
       toast.success(data.message || 'Email atualizado com sucesso!');
-
-      // ATUALIZA O CONTEXTO!
-      // Isto atualiza o email na UI em tempo real
       if (user) {
         setUser({ ...user, email: variables.newEmail });
       }
@@ -320,8 +310,6 @@ export const useUpdateUnverifiedEmail = () => {
         error.response?.data?.message || 'Erro ao atualizar o email.';
       console.error('[useUpdateUnverifiedEmail] Erro:', message);
       toast.error(message);
-      // O 'error' será capturado pelo 'correctError' na página e exibido no formulário
     },
   });
 };
-// --- FIM DA ADIÇÃO ---
