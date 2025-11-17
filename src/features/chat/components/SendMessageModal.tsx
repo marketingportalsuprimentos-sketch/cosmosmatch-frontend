@@ -1,4 +1,5 @@
 // src/features/chat/components/SendMessageModal.tsx
+// (COLE ISTO NO SEU ARQUIVO)
 
 import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
@@ -36,9 +37,11 @@ export function SendMessageModal({
     );
   };
 
-  const avatarUrl = targetUser.imageUrl 
-    ? `${(import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')}/${targetUser.imageUrl}`
-    : '/default-avatar.png';
+  // --- INÍCIO DA CORREÇÃO (Bug do Avatar no Modal de Mensagem) ---
+  // A lógica antiga que prefixava VITE_API_URL estava incorreta,
+  // pois 'targetUser.imageUrl' já é uma URL completa do Cloudinary.
+  const avatarUrl = targetUser.imageUrl ?? '/default-avatar.png';
+  // --- FIM DA CORREÇÃO ---
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
