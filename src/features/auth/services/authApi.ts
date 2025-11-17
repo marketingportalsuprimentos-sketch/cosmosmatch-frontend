@@ -1,4 +1,6 @@
 // frontend/src/features/auth/services/authApi.ts
+// (COLE ISTO NO SEU ARQUIVO)
+
 import { api } from '@/services/api';
 import {
   LoginDto,
@@ -38,7 +40,6 @@ export const resetPassword = async (payload: ResetPasswordDto) => {
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Fase 3: Verificação de Email) ---
 /**
  * Envia o token de verificação (do link do email) para o backend
  */
@@ -48,23 +49,24 @@ export const verifyEmail = async (token: string): Promise<AuthResponse> => {
   });
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Fase 3.1: Reenviar Verificação) ---
 /**
  * Pede ao backend para reenviar o email de verificação
  */
 export const resendVerificationEmail = async (): Promise<{ message: string }> => {
   // Apenas chama a rota POST. O token de autorização é adicionado
   // automaticamente pelo interceptor do 'api.ts'.
+  
+  // --- INÍCIO DA CORREÇÃO (Erro 404) ---
+  // A rota foi atualizada para corresponder ao backend
   const { data } = await api.post<{ message: string }>(
-    '/auth/resend-verification',
+    '/auth/resend-verification-email', 
   );
+  // --- FIM DA CORREÇÃO ---
+
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Solução: Corrigir Email) ---
 /**
  * Pede ao backend para ATUALIZAR o email não verificado
  */
@@ -78,4 +80,3 @@ export const updateUnverifiedEmail = async (
   );
   return data;
 };
-// --- FIM DA ADIÇÃO ---
