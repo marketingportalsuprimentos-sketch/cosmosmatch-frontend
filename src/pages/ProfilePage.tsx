@@ -1,5 +1,5 @@
 // frontend/src/pages/ProfilePage.tsx
-// (ATUALIZADO: Botão "Minha Sintonia" e Modal de Questionário)
+// (ATUALIZADO: Com Gráfico de Radar no Perfil)
 
 import { Fragment, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -22,8 +22,9 @@ import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { toast } from '@/lib/toast';
 import { Menu, Transition } from '@headlessui/react';
 
-// --- NOVO IMPORT: O Modal do Quiz ---
+// --- NOVOS IMPORTS ---
 import { BehavioralQuizModal } from '@/features/profile/components/BehavioralQuizModal';
+import { BehavioralRadarChart } from '@/features/profile/components/BehavioralRadarChart';
 
 // Ícones
 import {
@@ -41,7 +42,6 @@ import {
   LockClosedIcon,
   SparklesIcon,
   CalculatorIcon,
-  // --- NOVO ÍCONE PARA O BOTÃO ---
   AdjustmentsHorizontalIcon, 
 } from '@heroicons/react/24/solid';
 
@@ -62,8 +62,7 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
   // --- ESTADO PARA O MODAL DO QUIZ ---
   const [isQuizModalOpen, setQuizModalOpen] = useState(false);
 
-  // --- LÓGICA PARA O SIGNO SOLAR (Para o Quiz) ---
-  // Tenta pegar do mapa, se não tiver, fallback para Capricorn (o modal lida com isso)
+  // --- LÓGICA PARA O SIGNO SOLAR ---
   const sunSign = profile.natalChart?.planets?.find((p) => p.name === 'Sol')?.sign || 'Capricorn';
 
   const { data: followingList, isLoading: isLoadingFollowing } = useGetFollowing(
@@ -231,16 +230,16 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                 className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700"
               >
                 <CogIcon className="w-5 h-5" />
-                Editar Perfil
+                Editar
               </button>
               
-              {/* BOTÃO MINHA SINTONIA (NOVO) */}
+              {/* BOTÃO MINHA SINTONIA */}
               <button
                 onClick={() => setQuizModalOpen(true)}
                 className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700"
               >
                 <AdjustmentsHorizontalIcon className="w-5 h-5" />
-                Minha Sintonia
+                Sintonia
               </button>
             </>
           ) : (
@@ -292,6 +291,17 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
         </div>
       </div>
 
+      {/* --- INSERÇÃO DO GRÁFICO DE RADAR --- */}
+      {/* Mostra o gráfico se o usuário tiver respostas. Funciona para Dono e Visitante */}
+      {profile.behavioralAnswers && profile.behavioralAnswers.length > 0 && (
+        <div className="px-4">
+           <BehavioralRadarChart 
+              answers={profile.behavioralAnswers} 
+              sign={sunSign} 
+           />
+        </div>
+      )}
+
       <ConfirmationModal
         isOpen={isBlockModalOpen}
         onClose={() => setBlockModalOpen(false)}
@@ -313,7 +323,7 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
         />
       )}
 
-      {/* --- RENDERIZAÇÃO DO MODAL DE QUIZ (NOVO) --- */}
+      {/* --- RENDERIZAÇÃO DO MODAL DE QUIZ --- */}
       {isQuizModalOpen && (
         <BehavioralQuizModal
           isOpen={isQuizModalOpen}
