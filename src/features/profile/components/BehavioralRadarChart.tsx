@@ -1,5 +1,5 @@
 // src/features/profile/components/BehavioralRadarChart.tsx
-// (CORREÇÃO FINAL: Partilha Robusta com Fallback de Download)
+// (CORRIGIDO: Removemos o argumento extra do toast que causava o erro de build)
 
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -10,7 +10,7 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts';
-import { ShareIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
+import { ShareIcon } from '@heroicons/react/24/solid';
 import { toast } from '@/lib/toast';
 import html2canvas from 'html2canvas';
 
@@ -66,7 +66,6 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
 
         // 2. Tenta usar a API Nativa (Mobile Share Sheet)
         try {
-          // Verifica apenas se 'share' existe, sem 'canShare' restritivo
           if (navigator.share) {
             await navigator.share({
               files: [file],
@@ -86,10 +85,8 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
           link.href = canvas.toDataURL('image/png');
           link.click();
           
-          // Mensagem explicativa para o usuário
-          toast.success('Imagem salva na Galeria! Agora pode enviar no WhatsApp.', {
-            duration: 5000,
-          });
+          // CORREÇÃO AQUI: Removemos o objeto { duration: 5000 }
+          toast.success('Imagem salva na Galeria! Agora pode enviar no WhatsApp.');
         }
         
         setIsSharing(false);
