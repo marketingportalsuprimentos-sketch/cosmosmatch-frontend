@@ -1,5 +1,5 @@
 // frontend/src/pages/ProfilePage.tsx
-// (ATUALIZADO: Com Gráfico de Radar no Perfil)
+// (ATUALIZADO: Passando userId para o Gráfico de Radar)
 
 import { Fragment, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -22,7 +22,6 @@ import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { toast } from '@/lib/toast';
 import { Menu, Transition } from '@headlessui/react';
 
-// --- NOVOS IMPORTS ---
 import { BehavioralQuizModal } from '@/features/profile/components/BehavioralQuizModal';
 import { BehavioralRadarChart } from '@/features/profile/components/BehavioralRadarChart';
 
@@ -59,10 +58,8 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
   const avatarUrl = profile.imageUrl ?? null;
   const targetUserId = profile.userId;
 
-  // --- ESTADO PARA O MODAL DO QUIZ ---
   const [isQuizModalOpen, setQuizModalOpen] = useState(false);
 
-  // --- LÓGICA PARA O SIGNO SOLAR ---
   const sunSign = profile.natalChart?.planets?.find((p) => p.name === 'Sol')?.sign || 'Capricorn';
 
   const { data: followingList, isLoading: isLoadingFollowing } = useGetFollowing(
@@ -292,12 +289,12 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
       </div>
 
       {/* --- INSERÇÃO DO GRÁFICO DE RADAR --- */}
-      {/* Mostra o gráfico se o usuário tiver respostas. Funciona para Dono e Visitante */}
       {profile.behavioralAnswers && profile.behavioralAnswers.length > 0 && (
         <div className="px-4">
            <BehavioralRadarChart 
               answers={profile.behavioralAnswers} 
               sign={sunSign} 
+              userId={profile.userId} // <-- CORREÇÃO: Passando o ID correto para o link!
            />
         </div>
       )}
@@ -323,7 +320,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
         />
       )}
 
-      {/* --- RENDERIZAÇÃO DO MODAL DE QUIZ --- */}
       {isQuizModalOpen && (
         <BehavioralQuizModal
           isOpen={isQuizModalOpen}
