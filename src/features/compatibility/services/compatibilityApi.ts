@@ -1,12 +1,10 @@
 // frontend/src/features/compatibility/services/compatibilityApi.ts
+// (CORREÇÃO FINAL - Rota ajustada para incluir '/synastry')
 
 import { api } from '@/services/api';
-// --- INÍCIO DA ALTERAÇÃO ---
-// Importamos a nova interface de resposta completa
 import { FullSynastryPayload } from '@/types/compatibility.types';
-// --- FIM DA ALTERAÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Ideia 2: Tipos de Numerologia) ---
+// --- Tipos de Numerologia ---
 // Estes tipos devem espelhar os tipos do backend (compatibility.service.ts)
 
 export type NumerologyReportItem = {
@@ -22,19 +20,20 @@ export interface FullNumerologyReport {
   nameA: string; // Nome do Utilizador A
   nameB: string; // Nome do Utilizador B
 }
-// --- FIM DA ADIÇÃO ---
 
 
 /**
  * Busca o relatório de sinastria (ASTROLOGIA) detalhado COM OS MAPAS
- * Chama GET /api/compatibility/:userId
+ * Chama GET /api/compatibility/synastry/:userId
  */
 export const getSynastryReport = async (
   targetUserId: string,
-): Promise<FullSynastryPayload> => { // <-- TIPO DE RETORNO MUDADO
+): Promise<FullSynastryPayload> => { 
   try {
-    const response = await api.get<FullSynastryPayload>( // <-- TIPO DE GET MUDADO
-      `/compatibility/${targetUserId}`,
+    // CORREÇÃO AQUI: Adicionado '/synastry' na rota para buscar o relatório completo
+    // Antes estava chamando a rota de score básico (/compatibility/:id)
+    const response = await api.get<FullSynastryPayload>(
+      `/compatibility/synastry/${targetUserId}`,
     );
     return response.data;
   } catch (error) {
@@ -43,8 +42,6 @@ export const getSynastryReport = async (
   }
 };
 
-
-// --- INÍCIO DA ADIÇÃO (Ideia 2: API de Numerologia) ---
 
 /**
  * Busca o relatório de compatibilidade (NUMEROLOGIA)
@@ -63,4 +60,3 @@ export const getNumerologyReport = async (
     throw error;
   }
 };
-// --- FIM DA ADIÇÃO ---
