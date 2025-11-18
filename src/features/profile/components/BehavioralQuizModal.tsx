@@ -1,11 +1,9 @@
 // src/features/profile/components/BehavioralQuizModal.tsx
-// (CORRIGIDO: Ícones Heroicons + Hook useUpdateProfile correto)
+// (VISUAL CORRIGIDO: Layout dos botões Anterior/Próxima)
 
 import { useState, useEffect } from 'react';
-// 1. Correção: Usando Heroicons em vez de Lucide
 import { XMarkIcon, ChevronRightIcon, ChevronLeftIcon, CheckIcon } from '@heroicons/react/24/solid';
 import { ZODIAC_QUESTIONS } from '@/constants/zodiacQuestions';
-// 2. Correção: Importando o hook específico que existe no seu ficheiro
 import { useUpdateProfile } from '@/features/profile/hooks/useProfile'; 
 import { toast } from '@/lib/toast';
 
@@ -16,7 +14,6 @@ interface BehavioralQuizModalProps {
   existingAnswers?: number[];
 }
 
-// Helper para traduzir/normalizar o signo
 const getSignKey = (sign: string): string => {
   const map: Record<string, string> = {
     'Áries': 'Aries', 'Aries': 'Aries',
@@ -25,18 +22,17 @@ const getSignKey = (sign: string): string => {
     'Câncer': 'Cancer', 'Cancer': 'Cancer',
     'Leão': 'Leo', 'Leo': 'Leo',
     'Virgem': 'Virgo', 'Virgo': 'Virgo',
-    'Libra': 'Libra', // 3. Correção: Removida a duplicata
+    'Libra': 'Libra',
     'Escorpião': 'Scorpio', 'Scorpio': 'Scorpio',
     'Sagitário': 'Sagittarius', 'Sagittarius': 'Sagittarius',
     'Capricórnio': 'Capricorn', 'Capricorn': 'Capricorn',
     'Aquário': 'Aquarius', 'Aquarius': 'Aquarius',
     'Peixes': 'Pisces', 'Pisces': 'Pisces',
   };
-  return map[sign] || 'Capricorn'; // Fallback
+  return map[sign] || 'Capricorn';
 };
 
 export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers }: BehavioralQuizModalProps) => {
-  // 4. Correção: Usando a mutação correta do seu hook
   const { mutateAsync: updateProfileFn } = useUpdateProfile();
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -80,7 +76,6 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // 5. Correção: Chamando a função renomeada
       await updateProfileFn({
         behavioralAnswers: answers
       });
@@ -88,7 +83,6 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
       onClose();
     } catch (error) {
       console.error(error);
-      // O seu hook já tem toast de erro, mas deixamos aqui por segurança
     } finally {
       setIsSubmitting(false);
     }
@@ -105,43 +99,44 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
       <div className="bg-gray-900 border border-gray-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+        <div className="p-4 border-b border-gray-800 flex justify-between items-center shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white">Sintonia Cósmica</h2>
             <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold">
               {currentQuestion.category}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2">
             <XMarkIcon className="w-6 h-6" />
           </button>
         </div>
 
         {/* Barra de Progresso */}
-        <div className="w-full h-1 bg-gray-800">
+        <div className="w-full h-1 bg-gray-800 shrink-0">
           <div 
             className="h-full bg-indigo-500 transition-all duration-300"
             style={{ width: `${((currentStep + 1) / 20) * 100}%` }}
           />
         </div>
 
-        {/* Conteúdo (Pergunta + Slider) */}
-        <div className="p-6 flex-1 flex flex-col justify-center">
+        {/* Conteúdo (Pergunta + Slider) - Com scroll se necessário */}
+        <div className="p-6 flex-1 overflow-y-auto flex flex-col justify-center min-h-[300px]">
           <span className="text-sm text-gray-500 mb-2 block">
             Pergunta {currentQuestion.id} de 20
           </span>
           
-          <h3 className="text-xl text-white font-medium leading-relaxed mb-8 min-h-[80px]">
+          <h3 className="text-xl text-white font-medium leading-relaxed mb-8">
             {currentQuestion.text}
           </h3>
 
-          <div className="mb-8">
-            <div className="flex justify-between text-xs text-gray-400 mb-2 font-semibold">
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-gray-400 mb-4 font-semibold">
               <span>Não sou assim (0)</span>
-              <span className="text-indigo-300 text-lg">{currentVal}</span>
+              <span className="text-indigo-300 text-lg font-bold">{currentVal}</span>
               <span>Totalmente eu (10)</span>
             </div>
             
+            {/* Slider melhorado para touch */}
             <input
               type="range"
               min="0"
@@ -149,9 +144,9 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
               step="1"
               value={currentVal}
               onChange={(e) => handleSliderChange(Number(e.target.value))}
-              className={`w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer ${getSliderColor(currentVal)}`}
+              className={`w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer ${getSliderColor(currentVal)} focus:outline-none focus:ring-2 focus:ring-indigo-500/50`}
             />
-            <div className="flex justify-between text-[10px] text-gray-600 mt-1 px-1">
+            <div className="flex justify-between text-[10px] text-gray-600 mt-2 px-1 select-none">
               {[...Array(11)].map((_, i) => (
                 <span key={i}>|</span>
               ))}
@@ -159,21 +154,25 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
           </div>
         </div>
 
-        {/* Footer (Botões) */}
-        <div className="p-4 bg-gray-800/50 flex justify-between items-center">
+        {/* Footer (Botões) - CORRIGIDO O ESPAÇAMENTO E ALINHAMENTO */}
+        <div className="p-4 bg-gray-800/50 flex justify-between items-center border-t border-gray-800 shrink-0">
+          
+          {/* Botão ANTERIOR (Agora com largura fixa ou alinhamento flex melhor) */}
           <button 
             onClick={handlePrev}
             disabled={currentStep === 0}
-            className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors
-              ${currentStep === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-white hover:bg-gray-700'}`}
+            className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium transition-colors min-w-[100px]
+              ${currentStep === 0 ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
           >
-            <ChevronLeftIcon className="w-5 h-5 mr-1" /> Anterior
+            <ChevronLeftIcon className="w-5 h-5 mr-1" /> 
+            <span>Anterior</span>
           </button>
 
+          {/* Botão PRÓXIMA/FINALIZAR */}
           <button 
             onClick={handleNext}
             disabled={isSubmitting}
-            className="flex items-center px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-900/20"
+            className="flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-900/20 min-w-[120px]"
           >
             {isSubmitting ? (
               'Salvando...'
