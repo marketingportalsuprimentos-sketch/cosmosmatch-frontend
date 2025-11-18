@@ -1,5 +1,5 @@
 // src/features/profile/components/BehavioralRadarChart.tsx
-// (CORRIGIDO: Texto "Estilo de Vida" abreviado no gráfico para evitar corte)
+// (CORREÇÃO FINAL DE LAYOUT: Gráfico Grande + Labels HTML Customizadas nos cantos)
 
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -32,10 +32,10 @@ export const BehavioralRadarChart = ({ answers, sign, isOwner }: BehavioralRadar
     const lifestyleAvg = answers.slice(10, 15).reduce((a, b) => a + b, 0) / 5;
     const tastesAvg = answers.slice(15, 20).reduce((a, b) => a + b, 0) / 5;
 
+    // Nota: A ordem aqui define a posição no gráfico (Topo, Esquerda, Direita)
     return [
       { subject: 'Personalidade', A: personalityAvg, fullMark: 10 },
-      // CORREÇÃO AQUI: Alterado 'Estilo de Vida' para 'Estilo de V.'
-      { subject: 'Estilo de V.', A: lifestyleAvg, fullMark: 10 }, 
+      { subject: 'Estilo de Vida', A: lifestyleAvg, fullMark: 10 },
       { subject: 'Gostos', A: tastesAvg, fullMark: 10 },
     ];
   }, [answers]);
@@ -100,30 +100,45 @@ export const BehavioralRadarChart = ({ answers, sign, isOwner }: BehavioralRadar
   return (
     <div className="flex flex-col items-center mt-6">
       
-      {/* CARD QUE VIRA IMAGEM */}
       <div 
         ref={cardRef}
         className="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700 flex flex-col items-center w-full max-w-sm relative overflow-hidden"
       >
-        {/* Fundo Gradiente */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
         <h3 className="text-2xl font-bold text-white mb-1 mt-2">
           Vibração {sign}
         </h3>
-        <p className="text-xs text-gray-400 mb-6 uppercase tracking-widest font-semibold">
+        <p className="text-xs text-gray-400 mb-2 uppercase tracking-widest font-semibold">
           Sintonia Cósmica
         </p>
 
-        {/* Gráfico */}
-        <div className="w-full h-[250px] -ml-2 mb-2">
+        {/* Container do Gráfico com Labels HTML Manuais */}
+        <div className="w-full h-[280px] relative mt-4">
+          
+          {/* --- LABELS MANUAIS (Para não cortar e permitir gráfico grande) --- */}
+          
+          {/* Topo: Personalidade */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[11px] font-bold text-gray-300 uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded z-10">
+            Personalidade
+          </div>
+
+          {/* Canto Inferior Esquerdo: Estilo de Vida */}
+          <div className="absolute bottom-8 left-0 text-[11px] font-bold text-gray-300 uppercase tracking-wider bg-gray-800/80 px-1 rounded z-10 text-left leading-tight">
+            Estilo<br/>de Vida
+          </div>
+
+          {/* Canto Inferior Direito: Gostos */}
+          <div className="absolute bottom-8 right-0 text-[11px] font-bold text-gray-300 uppercase tracking-wider bg-gray-800/80 px-1 rounded z-10 text-right">
+            Gostos
+          </div>
+
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+            {/* OuterRadius 75% deixa o gráfico bem grande */}
+            <RadarChart cx="50%" cy="55%" outerRadius="75%" data={data}>
               <PolarGrid stroke="#4b5563" strokeDasharray="3 3" />
-              <PolarAngleAxis 
-                dataKey="subject" 
-                tick={{ fill: '#e5e7eb', fontSize: 11, fontWeight: 'bold' }} 
-              />
+              {/* Tick false esconde os textos automáticos do Recharts (que cortavam) */}
+              <PolarAngleAxis dataKey="subject" tick={false} />
               <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
               <Radar
                 name={sign}
@@ -137,8 +152,7 @@ export const BehavioralRadarChart = ({ answers, sign, isOwner }: BehavioralRadar
           </ResponsiveContainer>
         </div>
 
-        {/* Branding */}
-        <div className="flex items-center gap-2 mt-4 opacity-70">
+        <div className="flex items-center gap-2 mt-2 opacity-70">
           <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
             <span className="text-[10px] text-white font-bold">CM</span>
           </div>
@@ -148,7 +162,6 @@ export const BehavioralRadarChart = ({ answers, sign, isOwner }: BehavioralRadar
         </div>
       </div>
 
-      {/* BOTÃO DE AÇÃO (SÓ APARECE SE FOR O DONO) */}
       {isOwner && (
         <button
           onClick={handleShareImage}
