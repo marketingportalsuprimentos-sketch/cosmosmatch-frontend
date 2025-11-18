@@ -1,5 +1,5 @@
 // src/features/profile/components/BehavioralRadarChart.tsx
-// (ATUALIZADO: Gera Imagem PNG para partilhar - Estilo Spotify Wrapped)
+// (CORREÇÃO FINAL: Partilha Robusta com Fallback de Download)
 
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -10,7 +10,7 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts';
-import { ShareIcon } from '@heroicons/react/24/solid';
+import { ShareIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
 import { toast } from '@/lib/toast';
 import html2canvas from 'html2canvas';
 
@@ -21,7 +21,7 @@ interface BehavioralRadarChartProps {
 }
 
 export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProps) => {
-  const cardRef = useRef<HTMLDivElement>(null); // Referência para o elemento que será "fotografado"
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
 
   const data = useMemo(() => {
@@ -45,15 +45,14 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
     setIsSharing(true);
 
     try {
-      // 1. Gera a imagem a partir do elemento HTML (Card)
+      // 1. Gera a imagem
       const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: '#1f2937', // Garante fundo cinza escuro (bg-gray-800)
-        scale: 2, // Alta resolução (Retina)
+        backgroundColor: '#1f2937',
+        scale: 2,
         logging: false,
-        useCORS: true, // Para carregar fontes/ícones corretamente
+        useCORS: true,
       });
 
-      // 2. Converte para Blob (Arquivo)
       canvas.toBlob(async (blob) => {
         if (!blob) {
           toast.error('Erro ao gerar imagem.');
@@ -65,32 +64,40 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
           type: 'image/png',
         });
 
-        // 3. Tenta usar a API de Partilha Nativa (Mobile)
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
+        // 2. Tenta usar a API Nativa (Mobile Share Sheet)
+        try {
+          // Verifica apenas se 'share' existe, sem 'canShare' restritivo
+          if (navigator.share) {
             await navigator.share({
               files: [file],
-              title: `Minha Sintonia Cósmica`,
-              text: `A minha vibração ${sign} no CosmosMatch! ✨`,
+              title: `Minha Sintonia`,
+              text: `Minha vibração ${sign} no CosmosMatch! ✨`,
             });
-            toast.success('Imagem partilhada!');
-          } catch (err) {
-            console.log('Partilha cancelada pelo utilizador.');
+            toast.success('Menu de partilha aberto!');
+          } else {
+            throw new Error('Navegador não suporta partilha de arquivos.');
           }
-        } else {
-          // 4. Fallback para Desktop (Download da imagem)
+        } catch (shareError) {
+          // 3. FALLBACK: Se falhar (ou for Desktop), baixa a imagem
+          console.log('Partilha direta falhou, baixando imagem...', shareError);
+          
           const link = document.createElement('a');
           link.download = `sintonia-${sign.toLowerCase()}.png`;
           link.href = canvas.toDataURL('image/png');
           link.click();
-          toast.success('Imagem baixada para o seu dispositivo!');
+          
+          // Mensagem explicativa para o usuário
+          toast.success('Imagem salva na Galeria! Agora pode enviar no WhatsApp.', {
+            duration: 5000,
+          });
         }
+        
         setIsSharing(false);
       }, 'image/png');
 
     } catch (error) {
-      console.error('Erro ao gerar imagem:', error);
-      toast.error('Erro ao criar imagem para partilha.');
+      console.error('Erro fatal ao gerar imagem:', error);
+      toast.error('Erro ao processar imagem.');
       setIsSharing(false);
     }
   };
@@ -98,12 +105,12 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
   return (
     <div className="flex flex-col items-center mt-6">
       
-      {/* ESTE DIV É O QUE SERÁ TRANSFORMADO EM IMAGEM */}
+      {/* CARD QUE VIRA IMAGEM */}
       <div 
         ref={cardRef}
         className="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700 flex flex-col items-center w-full max-w-sm relative overflow-hidden"
       >
-        {/* Efeito de Brilho de Fundo (Opcional, para ficar bonito na foto) */}
+        {/* Fundo Gradiente */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
         <h3 className="text-2xl font-bold text-white mb-1 mt-2">
@@ -113,7 +120,7 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
           Sintonia Cósmica
         </p>
 
-        {/* O GRÁFICO */}
+        {/* Gráfico */}
         <div className="w-full h-[250px] -ml-2 mb-2">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
@@ -126,16 +133,16 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
               <Radar
                 name={sign}
                 dataKey="A"
-                stroke="#a78bfa" // Roxo claro
+                stroke="#a78bfa"
                 strokeWidth={3}
-                fill="#8b5cf6"   // Roxo
+                fill="#8b5cf6"
                 fillOpacity={0.6}
               />
             </RadarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Branding (Marketing no Card) */}
+        {/* Branding */}
         <div className="flex items-center gap-2 mt-4 opacity-70">
           <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
             <span className="text-[10px] text-white font-bold">CM</span>
@@ -146,14 +153,14 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
         </div>
       </div>
 
-      {/* BOTÃO DE AÇÃO (FORA DO CARD) */}
+      {/* BOTÃO DE AÇÃO */}
       <button
         onClick={handleShareImage}
         disabled={isSharing}
-        className="mt-6 flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg shadow-purple-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-6 flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg shadow-purple-900/20 transition-all active:scale-95 disabled:opacity-50"
       >
         {isSharing ? (
-          'Gerando Imagem...'
+          'Gerando...'
         ) : (
           <>
             <ShareIcon className="w-5 h-5" />
