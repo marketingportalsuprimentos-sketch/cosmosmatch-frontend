@@ -1,5 +1,5 @@
 // src/features/profile/components/BehavioralQuizModal.tsx
-// (VISUAL CORRIGIDO: Layout dos botões Anterior/Próxima)
+// (CORREÇÃO FINAL: Slider afastado das bordas para evitar conflito com gestos do telemóvel)
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, ChevronRightIcon, ChevronLeftIcon, CheckIcon } from '@heroicons/react/24/solid';
@@ -119,7 +119,7 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
           />
         </div>
 
-        {/* Conteúdo (Pergunta + Slider) - Com scroll se necessário */}
+        {/* Conteúdo (Pergunta + Slider) */}
         <div className="p-6 flex-1 overflow-y-auto flex flex-col justify-center min-h-[300px]">
           <span className="text-sm text-gray-500 mb-2 block">
             Pergunta {currentQuestion.id} de 20
@@ -129,14 +129,14 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
             {currentQuestion.text}
           </h3>
 
-          <div className="mb-4">
+          {/* --- CORREÇÃO AQUI: Adicionado padding horizontal extra (px-4) no container do slider --- */}
+          <div className="mb-4 px-4">
             <div className="flex justify-between text-xs text-gray-400 mb-4 font-semibold">
               <span>Não sou assim (0)</span>
               <span className="text-indigo-300 text-lg font-bold">{currentVal}</span>
               <span>Totalmente eu (10)</span>
             </div>
             
-            {/* Slider melhorado para touch */}
             <input
               type="range"
               min="0"
@@ -144,7 +144,8 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
               step="1"
               value={currentVal}
               onChange={(e) => handleSliderChange(Number(e.target.value))}
-              className={`w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer ${getSliderColor(currentVal)} focus:outline-none focus:ring-2 focus:ring-indigo-500/50`}
+              // --- CORREÇÃO AQUI: Adicionado 'touch-none' para bloquear gestos do browser ---
+              className={`w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer touch-none ${getSliderColor(currentVal)} focus:outline-none focus:ring-2 focus:ring-indigo-500/50`}
             />
             <div className="flex justify-between text-[10px] text-gray-600 mt-2 px-1 select-none">
               {[...Array(11)].map((_, i) => (
@@ -154,25 +155,22 @@ export const BehavioralQuizModal = ({ isOpen, onClose, sunSign, existingAnswers 
           </div>
         </div>
 
-        {/* Footer (Botões) - CORRIGIDO O ESPAÇAMENTO E ALINHAMENTO */}
-        <div className="p-4 bg-gray-800/50 flex justify-between items-center border-t border-gray-800 shrink-0">
-          
-          {/* Botão ANTERIOR (Agora com largura fixa ou alinhamento flex melhor) */}
+        {/* Footer (Botões) */}
+        <div className="p-4 bg-gray-800/50 flex justify-between items-center border-t border-gray-800 shrink-0 gap-4">
           <button 
             onClick={handlePrev}
             disabled={currentStep === 0}
-            className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium transition-colors min-w-[100px]
+            className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1
               ${currentStep === 0 ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
           >
             <ChevronLeftIcon className="w-5 h-5 mr-1" /> 
-            <span>Anterior</span>
+            Anterior
           </button>
 
-          {/* Botão PRÓXIMA/FINALIZAR */}
           <button 
             onClick={handleNext}
             disabled={isSubmitting}
-            className="flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-900/20 min-w-[120px]"
+            className="flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-900/20 flex-1"
           >
             {isSubmitting ? (
               'Salvando...'
