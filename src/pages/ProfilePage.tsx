@@ -1,11 +1,8 @@
 // frontend/src/pages/ProfilePage.tsx
-// (COLE ISTO NO SEU ARQUIVO)
+// (ATUALIZADO: Botão "Minha Sintonia" e Modal de Questionário)
 
 import { Fragment, useState } from 'react';
-// --- INÍCIO DA CORREÇÃO (BUG 402) ---
-// Precisamos do 'useNavigate' dentro do 'ProfileCosmicDetails'
 import { useParams, Link, useNavigate } from 'react-router-dom';
-// --- FIM DA CORREÇÃO ---
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useGetMyProfile,
@@ -25,6 +22,9 @@ import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { toast } from '@/lib/toast';
 import { Menu, Transition } from '@headlessui/react';
 
+// --- NOVO IMPORT: O Modal do Quiz ---
+import { BehavioralQuizModal } from '@/features/profile/components/BehavioralQuizModal';
+
 // Ícones
 import {
   UserCircleIcon,
@@ -39,10 +39,10 @@ import {
   ArrowRightOnRectangleIcon,
   ShieldExclamationIcon,
   LockClosedIcon,
-  // --- INÍCIO DA ADIÇÃO (Ideia 2) ---
-  SparklesIcon, // Para Sinastria (Astrologia)
-  CalculatorIcon, // Para Numerologia
-  // --- FIM DA ADIÇÃO ---
+  SparklesIcon,
+  CalculatorIcon,
+  // --- NOVO ÍCONE PARA O BOTÃO ---
+  AdjustmentsHorizontalIcon, 
 } from '@heroicons/react/24/solid';
 
 // Tipos
@@ -54,18 +54,17 @@ import type {
 
 // --- COMPONENTES INTERNOS ---
 
-// (Componente ProfileHeader - Sem alterações)
 const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolean; }) => {
-  // ... (código igual)
   const navigate = useNavigate();
-
-  // --- INÍCIO DA CORREÇÃO (Bug do localhost no Header) ---
-  // A constante backendBaseUrl foi REMOVIDA.
-  // O profile.imageUrl (do Cloudinary) já é um URL completo.
-  const avatarUrl = profile.imageUrl ?? null; // <-- CORRIGIDO
-  // --- FIM DA CORREÇÃO ---
-
+  const avatarUrl = profile.imageUrl ?? null;
   const targetUserId = profile.userId;
+
+  // --- ESTADO PARA O MODAL DO QUIZ ---
+  const [isQuizModalOpen, setQuizModalOpen] = useState(false);
+
+  // --- LÓGICA PARA O SIGNO SOLAR (Para o Quiz) ---
+  // Tenta pegar do mapa, se não tiver, fallback para Capricorn (o modal lida com isso)
+  const sunSign = profile.natalChart?.planets?.find((p) => p.name === 'Sol')?.sign || 'Capricorn';
 
   const { data: followingList, isLoading: isLoadingFollowing } = useGetFollowing(
     'me',
@@ -132,7 +131,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
   return (
     <>
       <div className="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col items-center relative">
-        {/* ... (Menu de Opções do Dono... igual) ... */}
         {isOwner && (
           <div className="absolute top-4 right-4 z-10">
             <Menu as="div" className="relative inline-block text-left">
@@ -152,7 +150,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                 leaveTo="transform opacity-0 scale-95"
               >
                 <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-600 rounded-md bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                  {/* ... (Itens do Menu... iguais) ... */}
                   <div className="px-1 py-1">
                     <Menu.Item>
                       {({ active }) => (
@@ -195,7 +192,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
           </div>
         )}
 
-        {/* ... (Avatar, Nome, Cidade... iguais) ... */}
         <div className="relative">
           {avatarUrl ? (
             <img
@@ -226,17 +222,29 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
           </div>
         )}
 
-        {/* ... (Botões de Ação... iguais) ... */}
         <div className="flex gap-2 md:gap-4 mt-4 w-full justify-center">
           {isOwner ? (
-            <button
-              onClick={() => navigate('/profile/edit')}
-              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700"
-            >
-              <CogIcon className="w-5 h-5" />
-              Editar Perfil
-            </button>
+            // --- DONO DO PERFIL (Botões) ---
+            <>
+              <button
+                onClick={() => navigate('/profile/edit')}
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700"
+              >
+                <CogIcon className="w-5 h-5" />
+                Editar Perfil
+              </button>
+              
+              {/* BOTÃO MINHA SINTONIA (NOVO) */}
+              <button
+                onClick={() => setQuizModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700"
+              >
+                <AdjustmentsHorizontalIcon className="w-5 h-5" />
+                Minha Sintonia
+              </button>
+            </>
           ) : (
+            // --- VISITANTE (Botões) ---
             <>
               <button
                 onClick={handleConnectClick}
@@ -284,7 +292,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
         </div>
       </div>
 
-      {/* ... (Modais ConfirmationModal e SendMessageModal... iguais) ... */}
       <ConfirmationModal
         isOpen={isBlockModalOpen}
         onClose={() => setBlockModalOpen(false)}
@@ -305,11 +312,21 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
           targetUser={profile}
         />
       )}
+
+      {/* --- RENDERIZAÇÃO DO MODAL DE QUIZ (NOVO) --- */}
+      {isQuizModalOpen && (
+        <BehavioralQuizModal
+          isOpen={isQuizModalOpen}
+          onClose={() => setQuizModalOpen(false)}
+          sunSign={sunSign}
+          existingAnswers={profile.behavioralAnswers || []}
+        />
+      )}
+
     </>
   );
 };
 
-// (Componente ProfileAbout - Sem alterações)
 const ProfileAbout = ({ bio }: { bio: string }) => (
   <div className="bg-gray-800 p-4 rounded-lg shadow-md">
     <h3 className="text-xl font-semibold text-white mb-2">Sobre mim</h3>
@@ -317,7 +334,6 @@ const ProfileAbout = ({ bio }: { bio: string }) => (
   </div>
 );
 
-// --- INÍCIO DA ALTERAÇÃO (Corrigido o estilo do botão Sinastria) ---
 const ProfileCosmicDetails = ({
   profile,
   natalChart,
@@ -325,9 +341,7 @@ const ProfileCosmicDetails = ({
   onViewChartClick,
   onShowLockModal,
   isOwner,
-  // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-  loggedInUserStatus, // 1. Receber o status do utilizador logado
-  // --- FIM DA CORREÇÃO ---
+  loggedInUserStatus,
 }: {
   profile: Profile;
   natalChart: Profile['natalChart'];
@@ -335,9 +349,7 @@ const ProfileCosmicDetails = ({
   onViewChartClick: () => void;
   onShowLockModal: () => void;
   isOwner: boolean;
-  // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-  loggedInUserStatus: 'FREE' | 'PREMIUM' | 'LIFETIME' | undefined; // 2. Definir o tipo da nova prop
-  // --- FIM DA CORREÇÃO ---
+  loggedInUserStatus: 'FREE' | 'PREMIUM' | 'LIFETIME' | undefined;
 }) => {
   const MIN_FOLLOWERS = 5;
   const MIN_FOLLOWING = 10;
@@ -347,58 +359,43 @@ const ProfileCosmicDetails = ({
     isOwner &&
     (followersCount < MIN_FOLLOWERS || followingCount < MIN_FOLLOWING);
 
-  // --- INÍCIO DA CORREÇÃO DO BUG (reading 'find') ---
-  // Adicionamos '?' extra para o caso de 'planets' ou 'houses' serem undefined
   const sun = natalChart?.planets?.find((p) => p.name === 'Sol');
   const moon = natalChart?.planets?.find((p) => p.name === 'Lua');
   const ascendant = natalChart?.houses?.find((h) => h.name === 'Casa 1 (ASC)');
-  // --- FIM DA CORREÇÃO DO BUG ---
   
-  // --- LÓGICA DE VERIFICAÇÃO (igual) ---
   const hasFullNumerology = !!(numerologyMap && numerologyMap.expressionNumber);
   const hasNatalChart = !!natalChart;
 
-  // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-  const navigate = useNavigate(); // 3. Importar o hook de navegação
+  const navigate = useNavigate();
   const isUserFree = loggedInUserStatus === 'FREE';
 
-  // 4. Criar o handler para Sinastria
   const handleSinastryClick = (e: React.MouseEvent) => {
-    // Primeiro, verifica se os dados do *outro* utilizador existem
     if (!hasNatalChart) {
       e.preventDefault();
       return;
     }
-    // Segundo, verifica se o *nosso* utilizador é FREE
     if (isUserFree) {
-      e.preventDefault(); // Impede o <Link> de navegar
-      navigate('/premium'); // Redireciona para a página Premium
+      e.preventDefault();
+      navigate('/premium');
     }
-    // Se for PREMIUM, o <Link> funciona normally
   };
 
-  // 5. Criar o handler para Numerologia
   const handleNumerologyClick = (e: React.MouseEvent) => {
-    // Primeiro, verifica se os dados do *outro* utilizador existem
     if (!hasFullNumerology) {
       e.preventDefault();
       return;
     }
-    // Segundo, verifica se o *nosso* utilizador é FREE
     if (isUserFree) {
-      e.preventDefault(); // Impede o <Link> de navegar
-      navigate('/premium'); // Redireciona para a página Premium
+      e.preventDefault();
+      navigate('/premium');
     }
-    // Se for PREMIUM, o <Link> funciona normalmente
   };
-  // --- FIM DA CORREÇÃO ---
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg shadow-md">
       <h3 className="text-xl font-semibold text-white mb-4">
         Detalhes Cósmicos
       </h3>
-      {/* ... (Grelha Sol/Lua/Asc e Numerologia... igual) ... */}
       <div className="grid grid-cols-3 gap-4 text-center">
         <div>
           <dt className="text-sm text-gray-400">Sol ☀️</dt>
@@ -428,10 +425,7 @@ const ProfileCosmicDetails = ({
         </div>
       )}
 
-      {/* --- LÓGICA DE BOTÕES ATUALIZADA --- */}
-      
       {isOwner && (
-        // 1. Se for o DONO, vê o botão "Plano Astral"
         <button
           onClick={isLocked ? onShowLockModal : onViewChartClick}
           className={`mt-4 w-full flex items-center justify-center gap-2 text-white px-4 py-2 rounded-lg font-semibold transition-colors
@@ -448,34 +442,27 @@ const ProfileCosmicDetails = ({
       )}
 
       {!isOwner && (
-        // 2. Se for VISITANTE, vê os botões de Compatibilidade
         <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
           
-          {/* --- ESTA É A CORREÇÃO --- */}
-          {/* Botão de Sinastria (Astrologia) - CORRIGIDO (era bg-gray-700) */}
           <Link
             to={`/synastry/${profile.userId}`}
             className={`w-full flex items-center justify-center gap-2 text-white px-4 py-2 rounded-lg font-semibold transition-colors
               ${
                 hasNatalChart
-                  ? 'bg-indigo-600 hover:bg-indigo-700' // <-- CORRIGIDO para azul
+                  ? 'bg-indigo-600 hover:bg-indigo-700'
                   : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-60'
               }
             `}
-            // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-            onClick={handleSinastryClick} // 6. Aplicar o novo handler
-            // --- FIM DA CORREÇÃO ---
+            onClick={handleSinastryClick}
             aria-disabled={!hasNatalChart}
             title={!hasNatalChart ? 'Utilizador não preencheu os dados do mapa astral' : ''}
           >
             <SparklesIcon className="w-5 h-5" />
             Ver Sinastria (Astrologia)
           </Link>
-          {/* --- FIM DA CORREÇÃO --- */}
 
-          {/* Botão de Conexão (Numerologia) - Já estava correto */}
           <Link
-            to={`/numerology-report/${profile.userId}`} // <-- NOVA ROTA
+            to={`/numerology-report/${profile.userId}`}
             className={`w-full flex items-center justify-center gap-2 text-white px-4 py-2 rounded-lg font-semibold transition-colors
               ${
                 hasFullNumerology
@@ -483,9 +470,7 @@ const ProfileCosmicDetails = ({
                   : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-60'
               }
             `}
-            // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-            onClick={handleNumerologyClick} // 7. Aplicar o novo handler
-            // --- FIM DA CORREÇÃO ---
+            onClick={handleNumerologyClick}
             aria-disabled={!hasFullNumerology}
             title={!hasFullNumerology ? 'Utilizador não preencheu os dados para este relatório' : ''}
           >
@@ -493,7 +478,6 @@ const ProfileCosmicDetails = ({
             Ver Conexão (Numerologia)
           </Link>
           
-          {/* Mensagem de erro se faltar algum dado */}
           {(!hasNatalChart || !hasFullNumerology) && (
              <p className="text-xs text-center text-gray-500 pt-1">
                 Relatórios de compatibilidade indisponíveis. O utilizador ainda não preencheu todos os dados de perfil (data/hora/nome de nascimento).
@@ -501,16 +485,10 @@ const ProfileCosmicDetails = ({
           )}
         </div>
       )}
-      {/* --- FIM DA LÓGICA DE BOTÕES --- */}
     </div>
   );
 };
-// --- FIM DA ALTERAÇÃO ---
 
-
-// (Componente ConnectionList - CORRIGIDO)
-// --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
-// Removida a prop 'backendBaseUrl'
 const ConnectionList = ({
   users,
   isLoading,
@@ -522,9 +500,7 @@ const ConnectionList = ({
   error: Error | null;
   emptyMessage: string;
 }) => {
-// --- FIM DA CORREÇÃO ---
 
-  // ... (código igual)
   if (isLoading) {
     return <p className="text-gray-400 text-center py-4">A carregar...</p>;
   }
@@ -540,10 +516,7 @@ const ConnectionList = ({
   return (
     <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
       {users.map((user) => {
-        // --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
-        // O imageUrl (do Cloudinary) já é um URL completo.
-        const imageUrl = user.profile?.imageUrl ?? null; // <-- CORRIGIDO
-        // --- FIM DA CORREÇÃO ---
+        const imageUrl = user.profile?.imageUrl ?? null;
         return (
           <Link
             to={`/profile/${user.id}`}
@@ -569,17 +542,12 @@ const ConnectionList = ({
   );
 };
 
-// (Componente ProfileConnections - CORRIGIDO)
-// --- INÍCIO DA CORREÇÃO (Bug do localhost nas conexões) ---
-// Removida a prop 'backendBaseUrl'
 const ProfileConnections = ({
   targetUserId,
 }: {
   targetUserId: string;
 }) => {
-// --- FIM DA CORREÇÃO ---
 
-  // ... (código igual)
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>(
     'followers',
   );
@@ -635,7 +603,6 @@ const ProfileConnections = ({
             isLoading={isLoadingFollowers}
             error={followersError}
             emptyMessage="Nenhum seguidor encontrado."
-            // backendBaseUrl={backendBaseUrl} // <-- REMOVIDO
           />
         ) : (
           <ConnectionList
@@ -643,7 +610,6 @@ const ProfileConnections = ({
             isLoading={isLoadingFollowing}
             error={followingError}
             emptyMessage="Não está a seguir ninguém."
-            // backendBaseUrl={backendBaseUrl} // <-- REMOVIDO
           />
         )}
       </div>
@@ -651,9 +617,7 @@ const ProfileConnections = ({
   );
 };
 
-// (Componente NatalChartLockModal - CORRIGIDO)
 const NatalChartLockModal = ({ isOpen, onClose, counts, metas, }: { isOpen: boolean; onClose: () => void; counts: { followers: number; following: number }; metas: { followers: number; following: number }; }) => {
-  // ... (código igual)
   const navigate = useNavigate();
   return (
     <ConfirmationModal
@@ -701,9 +665,7 @@ const NatalChartLockModal = ({ isOpen, onClose, counts, metas, }: { isOpen: bool
   );
 };
 
-// (Componente ProfilePage - CORRIGIDO)
 export function ProfilePage() {
-  // ... (código igual)
   const { userId } = useParams<{ userId: string }>();
   const { user: loggedInUser, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
@@ -739,11 +701,6 @@ export function ProfilePage() {
     setAddPhotoModalOpen(true);
   };
 
-  // --- INÍCIO DA CORREÇÃO (Bug do localhost na Página) ---
-  // A constante backendBaseUrl foi REMOVIDA.
-  // Não precisamos dela, pois os componentes-filhos também foram corrigidos.
-  // --- FIM DA CORREÇÃO ---
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-white">
@@ -760,10 +717,7 @@ export function ProfilePage() {
     );
   }
 
-  // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-  // 8. Obter o status do utilizador logado
   const loggedInUserStatus = loggedInUser?.subscription?.status;
-  // --- FIM DA CORREÇÃO ---
 
   const photos = photosData ?? [];
   const metas = { followers: 5, following: 10 };
@@ -782,9 +736,7 @@ export function ProfilePage() {
           onViewChartClick={() => navigate('/natal-chart')}
           onShowLockModal={() => setLockModalOpen(true)}
           isOwner={isOwner}
-          // --- INÍCIO DA CORREÇÃO (BUG 402) ---
-          loggedInUserStatus={loggedInUserStatus} // 9. Passar o status como prop
-          // --- FIM DA CORREÇÃO ---
+          loggedInUserStatus={loggedInUserStatus}
         />
 
         <ProfileGalleryGrid
@@ -795,10 +747,7 @@ export function ProfilePage() {
           onPhotoClick={handlePhotoClick}
         />
 
-        {/* --- INÍCIO DA CORREÇÃO (Bug do localhost na Página) --- */}
-        {/* Removida a prop 'backendBaseUrl' */}
         <ProfileConnections targetUserId={targetUserId} />
-        {/* --- FIM DA CORREÇÃO --- */}
       </div>
 
       <AddGalleryPhotoModal

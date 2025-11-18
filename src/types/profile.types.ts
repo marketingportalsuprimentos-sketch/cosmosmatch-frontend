@@ -1,7 +1,5 @@
 // src/types/profile.types.ts
-// (COLE ISTO NO SEU ARQUIVO)
-
-// Este ficheiro espelha os DTOs e Modelos do Profile no backend
+// (ATUALIZADO: Com o campo behavioralAnswers)
 
 export interface PlanetPosition {
   name: string;
@@ -24,35 +22,34 @@ export interface FullNatalChart {
 }
 
 export interface PowerAspect {
-  id: string; // ex: "SOL_CASA_10"
-  title: string; // ex: "O Estratega de Carreira"
+  id: string;
+  title: string;
   description: string;
-  icon: string; // ex: "briefcase"
+  icon: string;
 }
 
 // O que enviamos para PATCH /profile
 export interface UpdateProfileDto {
   birthDate?: string;
   birthCity?: string;
-  birthTime?: string; // Formato "HH:MM"
+  birthTime?: string; 
   fullNameBirth?: string;
   currentCity?: string;
   gender?: 'MALE' | 'FEMALE' | 'NON_BINARY' | 'OTHER';
   bio?: string;
+  cpfCnpj?: string;
   
-  // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
-  cpfCnpj?: string; // Adicionado para corresponder ao schema.prisma
-  // --- FIM DA CORREÇÃO ---
+  // --- NOVO: Lista de respostas do questionário (0 a 10) ---
+  behavioralAnswers?: number[]; 
 }
 
-// Tipo para uma Conexão individual (baseado no seu ficheiro antigo)
 export interface Connection {
   id: string;
   name: string;
   mainPhotoUrl: string | null;
 }
 
-// O que recebemos de GET /profile ou das respostas de PATCH
+// O que recebemos de GET /profile
 export interface Profile {
   id: string;
   userId: string;
@@ -71,11 +68,8 @@ export interface Profile {
   currentCity: string | null;
   gender: string | null;
   bio: string | null;
-  imageUrl: string | null; // Avatar
-  
-  // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
-  cpfCnpj: string | null; // Adicionado para corresponder ao schema.prisma
-  // --- FIM DA CORREÇÃO ---
+  imageUrl: string | null;
+  cpfCnpj: string | null;
 
   natalChart: FullNatalChart | null;
   numerologyMap: {
@@ -87,28 +81,29 @@ export interface Profile {
   } | null;
   powerAspects: PowerAspect[] | null;
   
+  // --- NOVO: Respostas salvas no banco ---
+  behavioralAnswers: number[] | null;
+
   connections?: Connection[]; 
 }
 
-
-// Tipo para a Compatibilidade
 export interface CompatibilityResult {
   totalScore: number;
   summary: string;
   details: {
     astrology: { totalScore: number; summary: string };
     numerology: { totalScore: number; summary: string };
+    // Opcional: Pode vir 'behavior' do backend agora
+    behavior?: { totalScore: number; summary: string }; 
   };
 }
 
-// O que o backend retorna para um Like de foto de perfil
 export interface ProfilePhotoLike {
   createdAt: string;
   userId: string;
   photoId: string;
 }
 
-// Novo tipo para os endpoints de 'social'
 export interface BasicUserInfo {
   id: string;
   name: string;
@@ -117,7 +112,6 @@ export interface BasicUserInfo {
   } | null;
 }
 
-// O que o backend retorna para um Comentário de foto de perfil
 export interface ProfilePhotoComment {
   id: string;
   content: string;
@@ -127,7 +121,6 @@ export interface ProfilePhotoComment {
   user: BasicUserInfo;
 }
 
-// Tipo para as Fotos da Galeria
 export interface ProfilePhoto {
   id: string;
   url: string;
@@ -140,7 +133,6 @@ export interface ProfilePhoto {
   comments?: ProfilePhotoComment[];
 }
 
-// O que enviamos para POST /profile/gallery/:photoId/comment
 export interface CreateProfilePhotoCommentDto {
   content: string;
 }
