@@ -1,5 +1,5 @@
 // src/features/profile/components/BehavioralRadarChart.tsx
-// (CORRIGIDO: Removemos o argumento extra do toast que causava o erro de build)
+// (CORRIGIDO: Texto "Estilo de Vida" abreviado no gráfico para evitar corte)
 
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -18,9 +18,10 @@ interface BehavioralRadarChartProps {
   answers: number[] | null;
   sign: string;
   userId: string;
+  isOwner: boolean;
 }
 
-export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProps) => {
+export const BehavioralRadarChart = ({ answers, sign, isOwner }: BehavioralRadarChartProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -33,7 +34,8 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
 
     return [
       { subject: 'Personalidade', A: personalityAvg, fullMark: 10 },
-      { subject: 'Estilo de Vida', A: lifestyleAvg, fullMark: 10 },
+      // CORREÇÃO AQUI: Alterado 'Estilo de Vida' para 'Estilo de V.'
+      { subject: 'Estilo de V.', A: lifestyleAvg, fullMark: 10 }, 
       { subject: 'Gostos', A: tastesAvg, fullMark: 10 },
     ];
   }, [answers]);
@@ -45,7 +47,6 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
     setIsSharing(true);
 
     try {
-      // 1. Gera a imagem
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#1f2937',
         scale: 2,
@@ -64,7 +65,6 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
           type: 'image/png',
         });
 
-        // 2. Tenta usar a API Nativa (Mobile Share Sheet)
         try {
           if (navigator.share) {
             await navigator.share({
@@ -77,7 +77,6 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
             throw new Error('Navegador não suporta partilha de arquivos.');
           }
         } catch (shareError) {
-          // 3. FALLBACK: Se falhar (ou for Desktop), baixa a imagem
           console.log('Partilha direta falhou, baixando imagem...', shareError);
           
           const link = document.createElement('a');
@@ -85,7 +84,6 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
           link.href = canvas.toDataURL('image/png');
           link.click();
           
-          // CORREÇÃO AQUI: Removemos o objeto { duration: 5000 }
           toast.success('Imagem salva na Galeria! Agora pode enviar no WhatsApp.');
         }
         
@@ -150,21 +148,23 @@ export const BehavioralRadarChart = ({ answers, sign }: BehavioralRadarChartProp
         </div>
       </div>
 
-      {/* BOTÃO DE AÇÃO */}
-      <button
-        onClick={handleShareImage}
-        disabled={isSharing}
-        className="mt-6 flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg shadow-purple-900/20 transition-all active:scale-95 disabled:opacity-50"
-      >
-        {isSharing ? (
-          'Gerando...'
-        ) : (
-          <>
-            <ShareIcon className="w-5 h-5" />
-            Compartilhar Card
-          </>
-        )}
-      </button>
+      {/* BOTÃO DE AÇÃO (SÓ APARECE SE FOR O DONO) */}
+      {isOwner && (
+        <button
+          onClick={handleShareImage}
+          disabled={isSharing}
+          className="mt-6 flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg shadow-purple-900/20 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {isSharing ? (
+            'Gerando...'
+          ) : (
+            <>
+              <ShareIcon className="w-5 h-5" />
+              Compartilhar Card
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 };

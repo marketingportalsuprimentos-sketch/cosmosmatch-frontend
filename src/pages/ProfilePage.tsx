@@ -1,5 +1,5 @@
 // frontend/src/pages/ProfilePage.tsx
-// (ATUALIZADO: Passando userId para o Gráfico de Radar)
+// (ATUALIZADO: Passando isOwner para o gráfico)
 
 import { Fragment, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -294,7 +294,8 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
            <BehavioralRadarChart 
               answers={profile.behavioralAnswers} 
               sign={sunSign} 
-              userId={profile.userId} // <-- CORREÇÃO: Passando o ID correto para o link!
+              userId={profile.userId} 
+              isOwner={isOwner} // <-- CORREÇÃO: Passando se é o dono!
            />
         </div>
       )}
