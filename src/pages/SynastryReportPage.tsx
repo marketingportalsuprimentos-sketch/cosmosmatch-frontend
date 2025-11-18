@@ -1,4 +1,5 @@
 // frontend/src/pages/SynastryReportPage.tsx
+// (CORREÇÃO FINAL - Botão de Voltar Dinâmico)
 
 import { useParams, Link } from 'react-router-dom';
 import { useGetSynastryReport } from '@/features/compatibility/hooks/useCompatibilityQueries';
@@ -143,17 +144,16 @@ export const SynastryReportPage = () => {
         )}
       </div>
 
-      {/* --- INÍCIO DA ALTERAÇÃO (BOTÃO VOLTAR) --- */}
-      <div className="text-center mt-8">
+      {/* --- BOTÃO VOLTAR (AGORA DINÂMICO) --- */}
+      <div className="text-center mt-8 pb-10">
         <Link
-          // Corrigido de `/profile/${userId}` para `/profile`
-          to="/profile"
+          to={`/profile/${userId}`} 
           className="px-6 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors"
         >
-          Voltar ao Meu Perfil
+          Voltar ao Perfil de {nameB}
         </Link>
       </div>
-      {/* --- FIM DA ALTERAÇÃO --- */}
+      
     </div>
   );
 };
