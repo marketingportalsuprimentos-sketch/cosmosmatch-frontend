@@ -1,5 +1,5 @@
 // frontend/src/pages/ProfilePage.tsx
-// (ATUALIZADO: Passando isOwner para o gráfico)
+// (ATUALIZADO: Altura de 350px para Galeria E Conexões)
 
 import { Fragment, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -41,7 +41,9 @@ import {
   LockClosedIcon,
   SparklesIcon,
   CalculatorIcon,
-  AdjustmentsHorizontalIcon, 
+  AdjustmentsHorizontalIcon,
+  DocumentTextIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/solid';
 
 // Tipos
@@ -145,7 +147,7 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-600 rounded-md bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-600 rounded-md bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                   <div className="px-1 py-1">
                     <Menu.Item>
                       {({ active }) => (
@@ -164,6 +166,43 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                       )}
                     </Menu.Item>
                   </div>
+
+                  {/* Links Legais */}
+                  <div className="px-1 py-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/terms"
+                          className={`${
+                            active ? 'bg-indigo-600 text-white' : 'text-gray-200'
+                          } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                        >
+                          <DocumentTextIcon
+                            className="mr-2 h-5 w-5 text-gray-400 group-hover:text-white"
+                            aria-hidden="true"
+                          />
+                          Termos de Uso
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/privacy"
+                          className={`${
+                            active ? 'bg-indigo-600 text-white' : 'text-gray-200'
+                          } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                        >
+                          <ShieldCheckIcon
+                            className="mr-2 h-5 w-5 text-gray-400 group-hover:text-white"
+                            aria-hidden="true"
+                          />
+                          Política de Privacidade
+                        </Link>
+                      )}
+                    </Menu.Item>
+                  </div>
+
                   <div className="px-1 py-1">
                     <Menu.Item>
                       {({ active }) => (
@@ -220,7 +259,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
 
         <div className="flex gap-2 md:gap-4 mt-4 w-full justify-center">
           {isOwner ? (
-            // --- DONO DO PERFIL (Botões) ---
             <>
               <button
                 onClick={() => navigate('/profile/edit')}
@@ -230,7 +268,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                 Editar
               </button>
               
-              {/* BOTÃO MINHA SINTONIA */}
               <button
                 onClick={() => setQuizModalOpen(true)}
                 className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700"
@@ -240,7 +277,6 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
               </button>
             </>
           ) : (
-            // --- VISITANTE (Botões) ---
             <>
               <button
                 onClick={handleConnectClick}
@@ -288,14 +324,13 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
         </div>
       </div>
 
-      {/* --- INSERÇÃO DO GRÁFICO DE RADAR --- */}
       {profile.behavioralAnswers && profile.behavioralAnswers.length > 0 && (
         <div className="px-4">
            <BehavioralRadarChart 
               answers={profile.behavioralAnswers} 
               sign={sunSign} 
               userId={profile.userId} 
-              isOwner={isOwner} // <-- CORREÇÃO: Passando se é o dono!
+              isOwner={isOwner} 
            />
         </div>
       )}
@@ -603,7 +638,8 @@ const ProfileConnections = ({
         </button>
       </div>
 
-      <div>
+      {/* --- CORREÇÃO: ALTURA MÁXIMA NA LISTA DE CONEXÕES (350px) --- */}
+      <div className="max-h-[350px] overflow-y-auto pr-2">
         {activeTab === 'followers' ? (
           <ConnectionList
             users={followersData}
@@ -746,13 +782,16 @@ export function ProfilePage() {
           loggedInUserStatus={loggedInUserStatus}
         />
 
-        <ProfileGalleryGrid
-          photos={photos}
-          isOwner={isOwner}
-          profileUserId={targetUserId}
-          onAddPhotoClick={handleAddPhotoClick}
-          onPhotoClick={handlePhotoClick}
-        />
+        {/* --- CORREÇÃO: ALTURA MÁXIMA NA GALERIA (350px) --- */}
+        <div className="max-h-[350px] overflow-y-auto rounded-lg">
+          <ProfileGalleryGrid
+            photos={photos}
+            isOwner={isOwner}
+            profileUserId={targetUserId}
+            onAddPhotoClick={handleAddPhotoClick}
+            onPhotoClick={handlePhotoClick}
+          />
+        </div>
 
         <ProfileConnections targetUserId={targetUserId} />
       </div>

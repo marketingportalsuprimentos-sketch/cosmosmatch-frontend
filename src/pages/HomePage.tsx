@@ -1,16 +1,12 @@
 // src/pages/HomePage.tsx
 import { Link } from 'react-router-dom';
-import './HomePage.css'; // Importa o CSS específico
-
-// NOTA: Como estamos fora do router, não podemos usar o 'useNavigate'
-// Usamos o <Link> do 'react-router-dom' para a navegação.
+import './HomePage.css'; 
 
 export default function HomePage() {
   return (
     <div className="homepage-container">
       <header className="homepage-header">
         <div className="logo-placeholder">
-          {/* TODO: Substitua este texto pela sua imagem de Logo */}
           <span className="logo-text">CosmosMatch</span>
         </div>
         <nav className="homepage-nav">
@@ -38,7 +34,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Secção Opcional de "Features" */}
+        {/* Secção de Features */}
         <section className="features-section">
           <div className="feature-item">
             <h3>🌌 Mapas Astrais</h3>
@@ -57,7 +53,16 @@ export default function HomePage() {
 
       <footer className="homepage-footer">
         <p>© 2025 CosmosMatch. Todos os direitos reservados.</p>
-        {/* TODO: Adicione links para "Termos de Uso" ou "Política de Privacidade" se necessário */}
+        
+        {/* LINKS RECOLOCADOS AQUI */}
+        <div style={{ marginTop: '15px', fontSize: '0.9em', opacity: 0.8, display: 'flex', gap: '20px', justifyContent: 'center' }}>
+          <Link to="/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>
+            Termos de Uso
+          </Link>
+          <Link to="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>
+            Política de Privacidade
+          </Link>
+        </div>
       </footer>
     </div>
   );

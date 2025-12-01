@@ -1,9 +1,8 @@
 // src/services/api.ts
-// (COLE ISTO NO SEU ARQUIVO)
-
 import axios, { AxiosError } from 'axios';
-// Importamos o router que foi exportado do seu index.tsx
-import { router } from '@/router';
+
+// REMOVIDO: import { router } from '@/router'; 
+// (Não precisamos mais importar o router, pois vamos usar window.location)
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api',
@@ -24,37 +23,35 @@ api.interceptors.request.use(
   },
 );
 
+// Interceptor de RESPONSE
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Caso 1: Pagamento Necessário (402) - Paywall
     if (error.response?.status === 402) {
       const errorData = error.response.data as { message: string };
-      console.warn('PAYWALL INTERCEPTOR: Limite atingido. Redirecionando...', errorData.message);
+      console.warn('PAYWALL INTERCEPTOR: Limite atingido. Redirecionando...', errorData?.message);
       
-      router.navigate('/premium');
+      // CORREÇÃO: Redirecionamento nativo
+      window.location.href = '/premium';
     }
-    // --- INÍCIO DA CORREÇÃO (O "Beco sem Saída") ---
+    // Caso 2: Email não verificado (403)
     else if (error.response?.status === 403) {
       const errorData = error.response.data as { message: string };
-      // Esta é a mensagem exata que o nosso 'jwt-auth.guard.ts' envia
       const verificationMessage = 'Por favor, verifique o seu email para continuar a usar a aplicação.';
       
-      // 1. Verificamos se o URL do pedido é um dos URLs de "correção".
-      // (Tive de adivinhar os URLs com base nos nomes dos hooks, 
-      // ajuste se o seu 'authApi.ts' usar URLs diferentes)
       const isVerificationFixUrl = 
         error.config?.url?.endsWith('/auth/resend-verification-email') ||
         error.config?.url?.endsWith('/auth/update-unverified-email');
 
-      // 2. SÓ redirecionamos se a mensagem for a correta E
-      //    NÃO for um dos URLs de correção.
-      if (errorData.message === verificationMessage && !isVerificationFixUrl) {
-        console.warn('VERIFICATION INTERCEPTOR: Email não verificado e período de tolerância expirado. Redirecionando...');
-        // Redireciona para a nova página que vamos criar
-        router.navigate('/please-verify');
+      if (errorData?.message === verificationMessage && !isVerificationFixUrl) {
+        console.warn('VERIFICATION INTERCEPTOR: Bloqueio de segurança. Redirecionando...');
+        
+        // CORREÇÃO: Redirecionamento nativo
+        window.location.href = '/please-verify';
       }
     }
-    // --- FIM DA CORREÇÃO ---
+    
     return Promise.reject(error);
   },
 );

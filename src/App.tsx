@@ -1,8 +1,7 @@
 // src/App.tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { router } from './router'; // <- usa o export existente
+import { Router } from './router'; // Importamos o COMPONENTE Router (com R maiúsculo)
 
 // 1. Criar uma instância do QueryClient
 const queryClient = new QueryClient({
@@ -22,7 +21,8 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} /> {/* <- substitui <AppRouter /> */}
+        {/* CORREÇÃO: Usamos o componente <Router /> que já contém a lógica de proteção */}
+        <Router />
       </AuthProvider>
     </QueryClientProvider>
   );
