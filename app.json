@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "22f17e3f-9f9e-4465-9120-50ef2d3f2da3"
+      }
+    },
+    "android": {
+      "package": "com.ccarvalhobatitsa.frontend"
+    }
+  }
+}

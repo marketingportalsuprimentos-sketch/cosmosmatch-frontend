@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { MediaType, FeedPost } from '@/features/feed/services/feedApi';
 import { FeedCommentSheet } from '@/features/feed/components/FeedCommentSheet';
 import { toast } from 'sonner';
+import { useQueryClient, InfiniteData } from '@tanstack/react-query';
 
 import {
   UserPlusIcon,
@@ -31,10 +32,7 @@ import {
 } from '@/features/profile/hooks/useProfile';
 import { PersonalDayCard } from '@/features/feed/components/PersonalDayCard';
 
-// --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
-import { useQueryClient, InfiniteData } from '@tanstack/react-query';
-
-// O tipo de dados que o 'useGetFeed' retorna (inferido do seu código)
+// Definição do Tipo de Deck
 type FeedDeck = {
   author: {
     id: string;
@@ -43,9 +41,9 @@ type FeedDeck = {
   };
   posts: FeedPost[];
 };
-// --- FIM DA ADIÇÃO ---
 
-// (Componente de Loading - Sem alterações)
+// --- Componentes Auxiliares ---
+
 const LoadingFeed = () => (
   <div className="flex flex-1 items-center justify-center text-white">
     <svg
@@ -72,7 +70,6 @@ const LoadingFeed = () => (
   </div>
 );
 
-// (Componente EmptyFeed - Sem alterações)
 const EmptyFeed = ({ isError }: { isError?: boolean }) => (
   <div className="flex flex-1 items-center justify-center text-center text-gray-400 px-4">
     <p>
@@ -83,7 +80,6 @@ const EmptyFeed = ({ isError }: { isError?: boolean }) => (
   </div>
 );
 
-// (Componente PostMedia - Sem alterações)
 const PostMedia = ({ post, url }: { post: FeedPost; url: string }) => {
   const placeholder = '/placeholder-image.png';
   const mediaClasses = 'block w-full h-full object-contain select-none';
@@ -122,7 +118,6 @@ const PostMedia = ({ post, url }: { post: FeedPost; url: string }) => {
   );
 };
 
-// (Componente FeedProgressBars - Sem alterações)
 const FeedProgressBars = ({
   total,
   current,
@@ -163,13 +158,13 @@ const FeedProgressBars = ({
   );
 };
 
+// --- Componente Principal ---
+
 export function FeedPage() {
   const PHOTO_DURATION_SECONDS = 5;
 
   const navigate = useNavigate();
-  // --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
   const queryClient = useQueryClient();
-  // --- FIM DA ADIÇÃO ---
 
   const {
     data: feedData,
@@ -182,21 +177,19 @@ export function FeedPage() {
 
   const { mutate: likePostMutate, isPending: isLiking } = useLikePost();
   const { mutate: unlikePostMutate, isPending: isUnliking } = useUnlikePost();
-  const { mutate: deletePostMutate, isPending: isDeletingPost } =
-    useDeletePost();
+  const { mutate: deletePostMutate, isPending: isDeletingPost } = useDeletePost();
 
   const [currentDeckIndex, setCurrentDeckIndex] = useState(0);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
-
-  const [viewingCommentsForPostId, setViewingCommentsForPostId] =
-    useState<string | null>(null);
+  const [viewingCommentsForPostId, setViewingCommentsForPostId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Dados do Deck (Autor) e Post Atual
   const currentDeckData = feedData?.pages?.[currentDeckIndex];
   const currentPostData = currentDeckData?.posts?.[currentPostIndex];
   const isActionLoading = isLiking || isUnliking || isDeletingPost;
 
-  // (Handlers de Swipe - Sem alterações)
+  // --- Handlers de Navegação (Swipe) ---
   const handleSwipeLeft = useCallback(() => {
     const nextPostIndex = currentPostIndex + 1;
     if (currentDeckData && nextPostIndex < currentDeckData.posts.length) {
@@ -252,7 +245,6 @@ export function FeedPage() {
     preventScrollOnSwipe: true,
   });
 
-  // (useEffect de validação de índice - Sem alterações)
   useEffect(() => {
     if (
       feedData?.pages &&
@@ -265,7 +257,7 @@ export function FeedPage() {
     }
   }, [feedData?.pages, currentDeckIndex, hasNextPage, isFetchingNextPage]);
 
-  // (useEffect do Temporizador - Sem alterações)
+  // Timer automático
   useEffect(() => {
     if (
       currentPostData &&
@@ -310,7 +302,8 @@ export function FeedPage() {
     isPaused,
   ]);
 
-  // (Handler de Like - Sem alterações)
+  // --- Ações do Usuário ---
+
   const handleLikeToggle = () => {
     if (!currentPostData || isActionLoading) return;
     if (currentPostData.isLikedByMe) {
@@ -320,17 +313,13 @@ export function FeedPage() {
     }
   };
 
-  // (Handler de Comentário - Sem alterações)
   const handleCommentClick = () => {
     if (currentPostData) {
       setViewingCommentsForPostId(currentPostData.id);
     }
   };
 
-  // --- INÍCIO DA ATUALIZAÇÃO (Real-time Feed) ---
-  // Apanhamos o 'socket' do contexto de autenticação
   const { user: loggedInUser, socket } = useAuth();
-  // --- FIM DA ATUALIZAÇÃO ---
   const authorId = currentDeckData?.author?.id;
   const isOwner = loggedInUser?.id === authorId;
 
@@ -345,8 +334,7 @@ export function FeedPage() {
   const isAlreadyFollowing = followingList?.some(
     (user) => user.id === authorId,
   );
-  const isConnectLoading =
-    isFollowing || isUnfollowing || isLoadingFollowing;
+  const isConnectLoading = isFollowing || isUnfollowing || isLoadingFollowing;
 
   const handleConnectClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -358,7 +346,6 @@ export function FeedPage() {
     }
   };
 
-  // (Handler de Partilha - Sem alterações)
   const handleShare = () => {
     if (!currentPostData || !currentDeckData?.author) return;
 
@@ -392,7 +379,6 @@ export function FeedPage() {
     }
   };
 
-  // (Handler de Apagar Post - Sem alterações)
   const handleDeletePost = () => {
     if (!currentPostData || isDeletingPost) return;
 
@@ -407,7 +393,7 @@ export function FeedPage() {
       cancel: {
         label: 'Cancelar',
         onClick: () => {
-          /* Faz nada, o onDismiss trata de retomar */
+          /* Nada, onDismiss retoma */
         },
       },
       duration: 5000, 
@@ -415,12 +401,8 @@ export function FeedPage() {
     });
   };
   
-  // --- INÍCIO DA ADIÇÃO (Real-time Feed) ---
-  /**
-   * Este useEffect regista os listeners do WebSocket.
-   */
+  // --- WebSockets (Real-time) ---
   useEffect(() => {
-    // Se o socket não estiver pronto (a ligar ou falhou), não faz nada.
     if (!socket) {
       console.log('Socket.io: Aguardando conexão...');
       return;
@@ -428,59 +410,42 @@ export function FeedPage() {
 
     console.log('Socket.io: Conectado e a ouvir eventos do feed.');
 
-    /**
-     * Ouve por 'feed:new_post'.
-     * Quando um post novo é criado, invalidamos a query 'feed'.
-     * O React-Query irá re-buscar a página 0.
-     */
     const handleNewPost = (newPost: FeedPost) => {
       console.log('Socket.io: Evento [feed:new_post] recebido!', newPost);
-      // Invalida a query 'feed'. Isto força o 'useGetFeed' a re-buscar a página 0.
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     };
 
-    /**
-     * Ouve por 'feed:delete_post'.
-     * Quando um post é apagado, temos de o remover manualmente do cache.
-     * Não podemos 'invalidar' pois o post pode estar numa página antiga.
-     */
-    const handleDeletePost = (deleted: {
+    const handleDeletePostEvent = (deleted: {
       postId: string;
       authorId: string;
     }) => {
       console.log('Socket.io: Evento [feed:delete_post] recebido!', deleted);
       
-      // 'setQueryData' atualiza o cache do react-query
       queryClient.setQueryData(
-        ['feed'], // A key da nossa query
+        ['feed'], 
         (oldData: InfiniteData<FeedDeck> | undefined) => {
-          // Se não houver dados em cache, não faz nada
-          if (!oldData) return oldData;
+          if (!oldData || !oldData.pages) return oldData;
 
-          // 1. Mapeia todas as 'páginas' (decks)
           const newPages = oldData.pages
             .map((deck) => {
-              // Se este deck não for do autor do post apagado,
-              // retorna o deck intacto.
+              // --- CORREÇÃO DE SEGURANÇA: Evita o erro 'Cannot read properties of undefined' ---
+              if (!deck || !deck.author) {
+                return deck; 
+              }
+
               if (deck.author.id !== deleted.authorId) {
                 return deck;
               }
-
-              // Se for o deck do autor, filtra os posts
               const newPosts = deck.posts.filter(
                 (post) => post.id !== deleted.postId,
               );
-
-              // Retorna o deck com a lista de posts atualizada
               return {
                 ...deck,
                 posts: newPosts,
               };
             })
-            // 2. Filtra os decks que podem ter ficado vazios
-            .filter((deck) => deck.posts.length > 0);
+            .filter((deck) => deck && deck.posts && deck.posts.length > 0);
 
-          // Retorna a estrutura de dados completa para o react-query
           return {
             ...oldData,
             pages: newPages,
@@ -489,22 +454,17 @@ export function FeedPage() {
       );
     };
 
-    // Regista os listeners no socket
     socket.on('feed:new_post', handleNewPost);
-    socket.on('feed:delete_post', handleDeletePost);
+    socket.on('feed:delete_post', handleDeletePostEvent);
 
-    // Função de cleanup (IMPORTANTE)
-    // Remove os listeners quando o componente for desmontado
     return () => {
       console.log('Socket.io: A desligar listeners do feed.');
       socket.off('feed:new_post', handleNewPost);
-      socket.off('feed:delete_post', handleDeletePost);
+      socket.off('feed:delete_post', handleDeletePostEvent);
     };
-  }, [socket, queryClient]); // Dependências: socket e queryClient
-  // --- FIM DA ADIÇÃO ---
+  }, [socket, queryClient]);
 
-
-  // (Renderização de Loading/Empty - Sem alterações)
+  // --- Renderização ---
   if (isLoadingFeed) {
     return <LoadingFeed />;
   }
@@ -544,7 +504,6 @@ export function FeedPage() {
       ? postToDisplay.videoDuration
       : PHOTO_DURATION_SECONDS;
 
-  // (JSX - Sem alterações)
   return (
     <div
       {...swipeHandlers}
@@ -560,12 +519,10 @@ export function FeedPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* 1. Mídia */}
             <div className="absolute inset-0 px-4">
               <PostMedia post={postToDisplay} url={postMediaUrl} />
             </div>
 
-            {/* 2. Barras de Progresso */}
             {currentDeckData.posts.length >= 1 && (
               <FeedProgressBars
                 key={`${currentDeckIndex}-${currentPostIndex}`}
@@ -575,7 +532,6 @@ export function FeedPage() {
               />
             )}
 
-            {/* 3. Header do Autor */}
             <div className="pointer-events-none absolute top-6 left-0 right-0 z-10 px-4">
               <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3">
                 <img
@@ -640,7 +596,6 @@ export function FeedPage() {
               </div>
             </div>
 
-            {/* 4. Gradiente e Legenda */}
             {postToDisplay.content && (
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 pt-24 pb-4 px-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
                 <p className="text-sm text-white drop-shadow-sm">
@@ -649,7 +604,6 @@ export function FeedPage() {
               </div>
             )}
 
-            {/* 5. Botões de Ação */}
             <div className="absolute right-4 bottom-[calc(4rem+1rem)] flex flex-col space-y-5 items-center z-20">
               {!isOwner && (
                 <button
@@ -716,10 +670,8 @@ export function FeedPage() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Card Fixo */}
         <PersonalDayCard />
 
-        {/* Loading next page */}
         {isFetchingNextPage && (
           <div className="absolute bottom-[calc(4rem+1rem)] left-1/2 -translate-x-1-2 text-xs bg-black/50 px-2 py-1 rounded animate-pulse">
             Carregando próximo...
