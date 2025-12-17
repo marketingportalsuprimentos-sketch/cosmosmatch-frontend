@@ -11,7 +11,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
 
 export default function PleaseVerifyPage() {
-  const { user, signOut } = useAuth();
+  // CORREÇÃO: Trocamos 'signOut' por 'logout' para corresponder ao AuthContext
+  const { user, logout } = useAuth(); 
   const navigate = useNavigate();
   
   // Estados para edição de email
@@ -77,8 +78,9 @@ export default function PleaseVerifyPage() {
     }
   };
 
+  // CORREÇÃO: Usamos 'logout' aqui
   const handleLogout = () => {
-    signOut();
+    logout();
     navigate('/login');
   };
 
