@@ -12,7 +12,7 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/solid';
 
-// Componente de Cabeçalho Simples
+// --- Componente de Cabeçalho ---
 const BlockedHeader = () => {
   const navigate = useNavigate();
   return (
@@ -28,7 +28,7 @@ const BlockedHeader = () => {
   );
 };
 
-// Componente de Item da Lista
+// --- Componente de Item da Lista (CORRIGIDO 🛠️) ---
 const BlockedUserItem = ({
   user,
   onUnblock,
@@ -37,29 +37,45 @@ const BlockedUserItem = ({
   user: {
     id: string;
     name: string;
-    profile: { imageUrl: string | null } | null;
+    profile?: { imageUrl: string | null } | null; // Pode vir dentro de profile...
+    imageUrl?: string | null;                     // ...ou na raiz (correção do backend)
   };
   onUnblock: () => void;
   isUnblocking: boolean;
 }) => {
+  // 1. Pega a URL base do backend (remove o /api do final se tiver)
   const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '');
-  const avatarUrl = user.profile?.imageUrl
-    ? `${backendBaseUrl}/${user.profile.imageUrl}`
-    : null;
+
+  // 2. Tenta pegar a imagem de qualquer lugar que ela esteja
+  const rawImageUrl = user.profile?.imageUrl || user.imageUrl;
+  
+  let avatarUrl = null;
+
+  // 3. Lógica Inteligente de URL 🧠
+  if (rawImageUrl) {
+    if (rawImageUrl.startsWith('http')) {
+      // Se já tem http (Cloudinary ou Google), usa direto
+      avatarUrl = rawImageUrl;
+    } else {
+      // Se é local, garante que não fique com barra dupla (//)
+      const cleanPath = rawImageUrl.startsWith('/') ? rawImageUrl : `/${rawImageUrl}`;
+      avatarUrl = `${backendBaseUrl}${cleanPath}`;
+    }
+  }
 
   return (
-    <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+    <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg shadow-sm border border-gray-700">
       <Link to={`/profile/${user.id}`} className="flex items-center gap-3 group">
         {avatarUrl ? (
           <img
             src={avatarUrl}
             alt={user.name}
-            className="w-12 h-12 rounded-full object-cover"
+            className="w-12 h-12 rounded-full object-cover border border-gray-600 group-hover:border-indigo-500 transition-colors"
           />
         ) : (
-          <UserCircleIcon className="w-12 h-12 text-gray-600" />
+          <UserCircleIcon className="w-12 h-12 text-gray-500 group-hover:text-gray-400 transition-colors" />
         )}
-        <span className="font-semibold text-white group-hover:underline">
+        <span className="font-semibold text-white group-hover:text-indigo-400 transition-colors">
           {user.name}
         </span>
       </Link>
@@ -68,9 +84,9 @@ const BlockedUserItem = ({
         onClick={onUnblock}
         disabled={isUnblocking}
         className={`
-          px-4 py-2 rounded-lg font-semibold text-sm transition-colors
-          bg-indigo-600 text-white hover:bg-indigo-700
-          disabled:bg-gray-500 disabled:cursor-not-allowed
+          px-4 py-2 rounded-lg font-semibold text-sm transition-all
+          bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md
+          disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed
         `}
       >
         {isUnblocking ? 'Aguarde...' : 'Desbloquear'}
@@ -79,7 +95,7 @@ const BlockedUserItem = ({
   );
 };
 
-// Componente de Página Principal
+// --- Componente de Página Principal ---
 export default function BlockedProfilesPage() {
   const {
     data: blockedList,
@@ -94,8 +110,7 @@ export default function BlockedProfilesPage() {
     unblockUser(userId, {
       onSuccess: () => {
         toast.success('Usuário desbloqueado.');
-        // O 'useUnblockUser' já invalida a query 'blockedList',
-        // então a lista será atualizada automaticamente.
+        // O 'useUnblockUser' invalida a query, a lista atualiza sozinha.
       },
       onError: () => {
         toast.error('Erro ao desbloquear o usuário.');
@@ -106,9 +121,9 @@ export default function BlockedProfilesPage() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <p className="text-gray-400 text-center mt-8">
-          A carregar lista de bloqueados...
-        </p>
+        <div className="flex justify-center mt-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
       );
     }
 
@@ -116,16 +131,18 @@ export default function BlockedProfilesPage() {
       return (
         <div className="text-red-400 text-center mt-8 flex flex-col items-center gap-2">
           <ExclamationTriangleIcon className="w-8 h-8" />
-          <p>Não foi possível carregar a lista.</p>
+          <p>Não foi possível carregar a lista de bloqueados.</p>
         </div>
       );
     }
 
     if (!blockedList || blockedList.length === 0) {
       return (
-        <p className="text-gray-400 text-center mt-8">
-          Você não bloqueou nenhum usuário.
-        </p>
+        <div className="flex flex-col items-center justify-center mt-20 text-gray-400 opacity-70">
+           <UserCircleIcon className="w-16 h-16 mb-2" />
+           <p>Você não bloqueou ninguém.</p>
+           <p className="text-xs">Paz e amor! ✌️</p>
+        </div>
       );
     }
 
@@ -144,9 +161,9 @@ export default function BlockedProfilesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white pb-20">
       <BlockedHeader />
-      <main>{renderContent()}</main>
+      <main className="max-w-2xl mx-auto">{renderContent()}</main>
     </div>
   );
 }
