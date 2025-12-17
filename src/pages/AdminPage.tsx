@@ -1,30 +1,31 @@
 // frontend/src/pages/AdminPage.tsx
+
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; // <--- Adicionado Link
 import {
   useGetUsersList,
   useGetDashboardStats,
-  useGetUserCoordinates, // <-- INÍCIO DA ADIÇÃO (Plano do Mapa V2)
+  useGetUserCoordinates,
 } from '@/features/admin/hooks/useAdminQueries';
+import { useBanUser } from '@/features/admin/hooks/useAdminMutations';
 import {
   FiUsers,
   FiMessageSquare,
   FiDollarSign,
   FiCheckCircle,
-  FiTrendingUp,
   FiUserCheck,
   FiLoader,
   FiAlertCircle,
   FiUserPlus,
-  FiAlertTriangle,
+  FiAlertTriangle, // <--- Usado no botão de denúncias
   FiPercent,
-  FiMap, // <-- Adicionado
+  FiMap,
+  FiEye,
+  FiSlash,
 } from 'react-icons/fi';
-// Importa o formatDistanceToNowStrict (para "Última Atividade")
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// --- INÍCIO DA ADIÇÃO (Plano do Mapa V2) ---
-// Imports do Leaflet (Mapa)
 import L from 'leaflet';
 import {
   MapContainer,
@@ -33,17 +34,13 @@ import {
   Popup,
 } from 'react-leaflet';
 
-// Define o nosso ícone de "Ponto Vermelho"
-// Usamos a classe CSS 'red-dot-marker' que adicionámos ao index.css
 const redDotIcon = L.divIcon({
   className: 'red-dot-marker',
-  iconSize: [12, 12], // Tamanho do ícone
-  iconAnchor: [6, 6], // Ponto central
-  popupAnchor: [0, -6], // Onde o popup abre em relação ao ícone
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+  popupAnchor: [0, -6],
 });
-// --- FIM DA ADIÇÃO ---
 
-// Componente de Cartão de Estatística (Sem alterações)
 const StatCard = ({
   title,
   value,
@@ -62,10 +59,6 @@ const StatCard = ({
   </div>
 );
 
-// --- INÍCIO DA ADIÇÃO (Plano do Mapa V2) ---
-/**
- * O nosso novo componente de Mapa
- */
 const UserLocationMap = () => {
   const {
     data: coordinates,
@@ -103,10 +96,10 @@ const UserLocationMap = () => {
 
   return (
     <MapContainer
-      center={[20, 0]} // Centro inicial (visão global)
+      center={[20, 0]} 
       zoom={2}
       scrollWheelZoom={true}
-      className="admin-map-container" // Classe que define a altura (do index.css)
+      className="admin-map-container"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -116,10 +109,9 @@ const UserLocationMap = () => {
         <Marker
           key={coord.id}
           position={[coord.lat, coord.lng]}
-          icon={redDotIcon} // <-- O NOSSO PONTO VERMELHO
+          icon={redDotIcon}
         >
           <Popup>
-            {/* O conteúdo que aparece ao clicar no ponto */}
             <strong>{coord.name}</strong>
           </Popup>
         </Marker>
@@ -127,14 +119,13 @@ const UserLocationMap = () => {
     </MapContainer>
   );
 };
-// --- FIM DA ADIÇÃO ---
 
-
-// Componente Principal da Página (Versão 2 - Atualizada)
 export function AdminPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
+  const navigate = useNavigate();
 
+  // Queries
   const {
     data: statsData,
     isLoading: isLoadingStats,
@@ -147,12 +138,14 @@ export function AdminPage() {
     error: usersError,
   } = useGetUsersList(page, limit);
 
+  // Mutations
+  const { mutate: banUser, isPending: isBanning } = useBanUser();
+
   const stats = statsData;
   const totalPages = usersData
     ? Math.ceil(usersData.count / usersData.limit)
     : 0;
 
-  // Handler de erro (Sem alterações)
   if (statsError || usersError) {
     const errorMsg =
       (statsError as any)?.response?.data?.message ||
@@ -170,11 +163,33 @@ export function AdminPage() {
     );
   }
 
+  const handleViewProfile = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
+
+  const handleBanUser = (userId: string, userName: string) => {
+    if (window.confirm(`Tem a certeza que deseja banir o utilizador ${userName}? Esta ação bloqueará o acesso dele ao app.`)) {
+      banUser(userId);
+    }
+  };
+
   return (
     <div className="p-4 text-white max-w-7xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard do Admin</h1>
+      
+      {/* --- CABEÇALHO COM LINK PARA DENÚNCIAS --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-gray-700 pb-4">
+        <h1 className="text-3xl font-bold">Dashboard do Admin</h1>
+        
+        <Link 
+          to="/admin/reports" 
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold flex items-center gap-2 shadow-lg hover:shadow-red-900/50 transition-all"
+        >
+          <FiAlertTriangle className="text-xl" />
+          Gerenciar Denúncias
+        </Link>
+      </div>
 
-      {/* 1. Estatísticas (Versão 2) */}
+      {/* 1. Estatísticas */}
       {isLoadingStats || !stats ? (
         <div className="flex justify-center p-8">
           <FiLoader className="animate-spin text-4xl" />
@@ -224,19 +239,17 @@ export function AdminPage() {
         </dl>
       )}
 
-      {/* --- INÍCIO DA ADIÇÃO (Plano do Mapa V2 - Ação 3) --- */}
-      {/* 2. Mapa de Utilizadores */}
+      {/* 2. Mapa */}
       <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
         <h2 className="text-xl font-semibold p-4">
           Mapa de Localização de Utilizadores
         </h2>
-        <div className="p-4 pt-0"> {/* Wrapper para o mapa */}
+        <div className="p-4 pt-0">
           <UserLocationMap />
         </div>
       </div>
-      {/* --- FIM DA ADIÇÃO --- */}
 
-      {/* 3. Tabela de Utilizadores (Anteriormente Ponto 2) */}
+      {/* 3. Tabela */}
       <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden">
         <h2 className="text-xl font-semibold p-4">Lista de Utilizadores</h2>
         {isLoadingUsers ? (
@@ -249,6 +262,7 @@ export function AdminPage() {
               <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-700">
                   <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ações</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nome</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
@@ -265,18 +279,36 @@ export function AdminPage() {
                 </thead>
                 <tbody className="bg-gray-800 divide-y divide-gray-700">
                   {usersData?.data.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-700">
-                      {/* Nome */}
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">{user.name}</td>
-                      {/* Email */}
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">{user.email}</td>
-                      {/* Status */}
-                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                    <tr key={user.id} className={`hover:bg-gray-700 ${user.isBanned ? 'bg-red-900/10' : ''}`}>
+                      {/* Ações */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white flex space-x-2">
+                        <button 
+                          onClick={() => handleViewProfile(user.id)}
+                          className="text-indigo-400 hover:text-indigo-300 bg-indigo-900/30 p-2 rounded transition-colors"
+                          title="Ver Perfil Público"
+                        >
+                          <FiEye />
+                        </button>
                         
-                        {/* --- INÍCIO DA CORREÇÃO (Plano do Mapa V2) --- */}
-                        {/* O status 'PAID' não existe; os status são PREMIUM e LIFETIME */}
+                        {user.isBanned ? (
+                          <span className="text-red-500 font-bold text-xs p-2 border border-red-500 rounded">BANIDO</span>
+                        ) : (
+                          <button 
+                            onClick={() => handleBanUser(user.id, user.name)}
+                            disabled={isBanning}
+                            className="text-red-400 hover:text-red-300 bg-red-900/30 p-2 rounded transition-colors"
+                            title="Banir Usuário"
+                          >
+                            {isBanning ? <FiLoader className="animate-spin" /> : <FiSlash />}
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Dados */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">{user.name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">{user.email}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
                         {user.subscription?.status === 'PREMIUM' || user.subscription?.status === 'LIFETIME' ? (
-                        /* --- FIM DA CORREÇÃO --- */
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-900 text-green-200">
                             {user.subscription.status}
                           </span>
@@ -286,34 +318,29 @@ export function AdminPage() {
                           </span>
                         )}
                       </td>
-                      {/* Uso Gratuito */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 text-center">
                         {user.subscription?.freeContactsUsed ?? 0}
                       </td>
-                      {/* Expira em */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
                         {user.subscription?.expiresAt
                           ? format(new Date(user.subscription.expiresAt), 'dd/MM/yy')
                           : 'N/A'}
                       </td>
-                      {/* Idade */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 text-center">{user.age || 'N/A'}</td>
-                      {/* Gênero */}
                       <td className="px-4 py-4 whitespace-pr-nowrap text-sm text-gray-300">{user.gender || 'N/A'}</td>
-                      {/* Localidade */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-xs">{user.currentCity || 'N/A'}</td>
-                      {/* Fotos */}
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 text-center">{user._count.photos}</td>
-                      {/* Seguindo */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 text-center">
+                        <span className={user._count.photos > 0 ? "text-indigo-300 font-bold" : ""}>
+                          {user._count.photos}
+                        </span>
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 text-center">{user._count.following}</td>
-                      {/* Últ. Atividade */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
                         {formatDistanceToNowStrict(new Date(user.updatedAt), {
                           addSuffix: true,
                           locale: ptBR,
                         })}
                       </td>
-                      {/* Role */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">{user.role}</td>
                     </tr>
                   ))}
@@ -321,7 +348,7 @@ export function AdminPage() {
               </table>
             </div>
 
-            {/* Paginação (Sem alterações) */}
+            {/* Paginação */}
             <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-700 sm:px-6">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button

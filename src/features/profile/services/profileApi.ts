@@ -10,20 +10,18 @@ import type {
   CreateProfilePhotoCommentDto,
   BasicUserInfo,
 } from '@/types/profile.types';
-// --- INÍCIO DA ADIÇÃO (Gamificação) ---
-import type { NatalChartData } from '../hooks/useProfile'; // Vamos importar o tipo do hook
-// --- FIM DA ADIÇÃO ---
+import type { NatalChartData } from '../hooks/useProfile';
 
+// --- Funções de Perfil ---
 
-// Função Get My Profile (Corrigida)
+// Função Get My Profile
 export const getMyProfile = async (): Promise<Profile> => {
   const { data } = await api.get<Profile>('/profile/me');
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Ideia 3: Vibração do Dia) ---
 /**
- * Busca o número do dia pessoal (para o card no feed).
+ * Busca o número do dia pessoal
  */
 export const getPersonalDayVibration = async (): Promise<{ dayNumber: number }> => {
   const { data } = await api.get<{ dayNumber: number }>(
@@ -31,9 +29,8 @@ export const getPersonalDayVibration = async (): Promise<{ dayNumber: number }> 
   );
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
-// Função Update Profile (Correta)
+// Função Update Profile
 export const updateProfile = async (
   profileData: UpdateProfileDto
 ): Promise<Profile> => {
@@ -41,7 +38,7 @@ export const updateProfile = async (
   return data;
 };
 
-// Função Update Avatar (Corrigida)
+// Função Update Avatar
 export const updateAvatar = async (
   avatarFile: File,
   fileName: string
@@ -54,7 +51,7 @@ export const updateAvatar = async (
   return data;
 };
 
-// Função Get Public Profile (Correta)
+// Função Get Public Profile
 export const getPublicProfile = async (
   userId: string
 ): Promise<Profile & { compatibility: CompatibilityResult | null }> => {
@@ -64,14 +61,24 @@ export const getPublicProfile = async (
   return data;
 };
 
-// --- CORREÇÃO: Função Get Gallery Photos ---
+// --- SEGURANÇA / CONTA ---
+
+/**
+ * Solicita a exclusão da conta (Soft Delete / Quarentena)
+ * Rota: DELETE /users/me
+ */
+export const deleteMyAccount = async (): Promise<void> => {
+  await api.delete('/users/me');
+};
+
+// --- GALERIA ---
+
 export const getGalleryPhotos = async (userId: string): Promise<ProfilePhoto[]> => {
   const url = `/profile/${userId}/gallery`;
   const { data } = await api.get<ProfilePhoto[]>(url);
   return data;
 };
 
-// Função Add Photo To Gallery (Corrigida)
 export const addPhotoToGallery = async (
   photoFile: File,
   fileName: string
@@ -84,12 +91,10 @@ export const addPhotoToGallery = async (
   return data;
 };
 
-// Função Delete Photo From Gallery (Correta)
 export const deletePhotoFromGallery = async (photoId: string): Promise<void> => {
   await api.delete(`/profile/gallery/${photoId}`);
 };
 
-// Dar like numa foto da galeria (Correta)
 export const likeGalleryPhoto = async (
   photoId: string
 ): Promise<ProfilePhotoLike> => {
@@ -99,12 +104,10 @@ export const likeGalleryPhoto = async (
   return data;
 };
 
-// Tirar o like de uma foto da galeria (Correta)
 export const unlikeGalleryPhoto = async (photoId: string): Promise<void> => {
   await api.delete(`/profile/gallery/${photoId}/like`);
 };
 
-// Comentar numa foto da galeria (Correta)
 export const commentOnGalleryPhoto = async (
   photoId: string,
   commentData: CreateProfilePhotoCommentDto
@@ -116,10 +119,6 @@ export const commentOnGalleryPhoto = async (
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Função para Buscar Comentários) ---
-/**
- * Busca os comentários de uma foto específica da galeria.
- */
 export const getGalleryPhotoComments = async (
   photoId: string
 ): Promise<ProfilePhotoComment[]> => {
@@ -128,13 +127,10 @@ export const getGalleryPhotoComments = async (
   );
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
 
-// ----- INÍCIO DA ADIÇÃO (Passo 1.2) -----
-// Novas funções para o SocialModule (Block/Follow)
+// --- SOCIAL (Follow/Block) ---
 
-// --- Funções de Conexão (Follow) ---
 export const followUser = async (userId: string): Promise<void> => {
   await api.post(`/social/follow/${userId}`);
 };
@@ -153,7 +149,6 @@ export const getFollowing = async (userId: string): Promise<BasicUserInfo[]> => 
   return data;
 };
 
-// --- Funções de Bloqueio ---
 export const blockUser = async (userId: string): Promise<void> => {
   await api.post(`/social/block/${userId}`);
 };
@@ -166,51 +161,31 @@ export const getMyBlockedList = async (): Promise<BasicUserInfo[]> => {
   const { data } = await api.get<BasicUserInfo[]>('/social/block/list');
   return data;
 };
-// ----- FIM DA ADIÇÃO -----
 
-// --- Likes da Descoberta ---
+// --- LIKES (Discovery) ---
 
-/**
- * Dá "like" (Tipo 1) em um usuário.
- */
 export const likeUser = async (userId: string): Promise<void> => {
   await api.post(`/social/like/${userId}`);
 };
 
-/**
- * Busca a lista de usuários que deram "like" no usuário logado.
- * (Limitado a 200 pelo backend)
- */
 export const getLikesReceived = async (): Promise<BasicUserInfo[]> => {
   const { data } = await api.get<BasicUserInfo[]>('/social/likes/received');
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Likes Não Lidos) ---
-
-/**
- * Busca a CONTAGEM de "likes" (Tipo 1) não lidos.
- */
 export const getUnreadLikesCount = async (): Promise<{ count: number }> => {
   const { data } = await api.get<{ count: number }>('/social/likes/unread-count');
   return data;
 };
 
-/**
- * Marca todos os "likes" (Tipo 1) não lidos como lidos.
- */
 export const markLikesAsRead = async (): Promise<{ updatedCount: number }> => {
   const { data } = await api.post<{ updatedCount: number }>('/social/likes/mark-as-read');
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Gamificação) ---
-/**
- * Busca os dados do Mapa Astral pelo novo endpoint seguro.
- */
+// --- ASTROLOGIA ---
+
 export const getMyNatalChart = async (): Promise<NatalChartData> => {
   const { data } = await api.get<NatalChartData>('/astrology/my-natal-chart');
   return data;
 };
-// --- FIM DA ADIÇÃO ---

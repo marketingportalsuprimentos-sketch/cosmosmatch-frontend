@@ -2,33 +2,32 @@
 import { api } from '@/services/api';
 import { AuthUser, Subscription } from '@/types/auth.types';
 
-// --- Tipos de Dados (Versão 2) ---
+// --- Tipos de Dados ---
 
-// Interface para um único utilizador na lista do Admin
 export interface AdminUser {
   id: string;
   email: string;
   name: string;
   role: AuthUser['role'];
+  isBanned: boolean;
   createdAt: string;
-  updatedAt: string; // <-- Adicionado: Última Atividade
-  age: number | null; // <-- Adicionado: Idade
-  gender: string | null; // <-- Adicionado: Gênero
-  currentCity: string | null; // <-- Adicionado: Localidade
+  updatedAt: string;
+  age: number | null;
+  gender: string | null;
+  currentCity: string | null;
   subscription: {
     status: Subscription['status'];
     expiresAt: string | null;
-    freeContactsUsed: number; // <-- Adicionado: Uso Gratuito
+    freeContactsUsed: number;
   } | null;
   _count: {
     posts: number;
     messages: number;
-    following: number; // <-- Adicionado: Conexões
-    photos: number; // <-- Adicionado: Fotos
+    following: number;
+    photos: number;
   };
 }
 
-// Interface para a resposta paginada
 export interface PaginatedUsersResponse {
   data: AdminUser[];
   count: number;
@@ -36,7 +35,6 @@ export interface PaginatedUsersResponse {
   limit: number;
 }
 
-// Interface para as estatísticas (Versão 2)
 export interface DashboardStats {
   totalUsers: number;
   subscribedUsers: number;
@@ -45,25 +43,22 @@ export interface DashboardStats {
   confirmedPayments: number;
   totalMessages: number;
   totalMatches: number;
-  newUsers: number; // <-- Adicionado
-  usersAtPaywall: number; // <-- Adicionado
-  conversionRate: number; // <-- Adicionado
+  newUsers: number;
+  usersAtPaywall: number;
+  conversionRate: number;
 }
 
-// --- INÍCIO DA ADIÇÃO (Plano do Mapa V2) ---
-// Interface para a nova rota de coordenadas
 export interface UserCoordinate {
   id: string;
   name: string;
   lat: number;
   lng: number;
 }
-// --- FIM DA ADIÇÃO ---
 
 // --- Funções da API ---
 
 /**
- * Busca a lista paginada de utilizadores (Apenas Admin)
+ * Busca a lista paginada de utilizadores
  */
 export const getUsersList = async (
   page = 1,
@@ -76,16 +71,15 @@ export const getUsersList = async (
 };
 
 /**
- * Busca as estatísticas do dashboard (Apenas Admin)
+ * Busca as estatísticas do dashboard
  */
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   const { data } = await api.get<DashboardStats>('/admin/users/dashboard-stats');
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Plano do Mapa V2) ---
 /**
- * Busca TODAS as coordenadas de utilizadores para o mapa (Apenas Admin)
+ * Busca coordenadas para o mapa
  */
 export const getUserCoordinates = async (): Promise<UserCoordinate[]> => {
   const { data } = await api.get<UserCoordinate[]>(
@@ -93,4 +87,17 @@ export const getUserCoordinates = async (): Promise<UserCoordinate[]> => {
   );
   return data;
 };
-// --- FIM DA ADIÇÃO ---
+
+/**
+ * Bane um utilizador (Muda isBanned para true)
+ */
+export const banUser = async (userId: string): Promise<void> => {
+  await api.patch(`/admin/users/${userId}/ban`);
+};
+
+/**
+ * Apaga um post como Admin (usando a rota padrão de delete)
+ */
+export const deletePostAsAdmin = async (postId: string): Promise<void> => {
+  await api.delete(`/post/${postId}`);
+};

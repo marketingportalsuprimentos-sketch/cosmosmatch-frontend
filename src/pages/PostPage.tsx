@@ -2,18 +2,18 @@
 
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getPostById, PublicPost } from '@/features/feed/services/feedApi'; // Vamos criar isto no próximo passo
-import { MediaType } from '@/features/feed/services/feedApi';
-import { FiLoader, FiAlertTriangle, FiArrowLeft } from 'react-icons/fi';
+import { getPostById, PublicPost, MediaType } from '@/features/feed/services/feedApi';
+import { FiLoader, FiAlertTriangle, FiArrowLeft, FiShield } from 'react-icons/fi'; // <--- FiShield adicionado
+import { useAuth } from '@/contexts/AuthContext'; // <--- Importado Auth para verificar Admin
 
-// --- Helpers de URL (copiados do FeedPage) ---
+// --- Helpers de URL ---
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const backendOrigin = apiUrl.replace(/\/api\/?$/, '');
 const defaultAvatar = '/default-avatar.png';
 const toPublicUrl = (p?: string | null) =>
   !p ? undefined : /^https?:\/\//i.test(p) ? p : `${backendOrigin}/${p}`;
 
-// --- Componente de Mídia (copiado do FeedPage) ---
+// --- Componente de Mídia ---
 const PostMedia = ({ post, url }: { post: PublicPost; url: string }) => {
   const placeholder = '/placeholder-image.png';
   const mediaClasses = 'block w-full h-full object-contain select-none';
@@ -52,7 +52,7 @@ const PostMedia = ({ post, url }: { post: PublicPost; url: string }) => {
   );
 };
 
-// --- Hook de Query (definido localmente para simplicidade) ---
+// --- Hook de Query ---
 const usePublicPost = (postId: string) => {
   return useQuery<PublicPost, Error>({
     queryKey: ['publicPost', postId],
@@ -60,7 +60,6 @@ const usePublicPost = (postId: string) => {
     enabled: !!postId,
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: (failureCount, error: any) => {
-      // Não tenta de novo se for 404 (Post não encontrado)
       if (error?.response?.status === 404) {
         return false;
       }
@@ -73,6 +72,9 @@ const usePublicPost = (postId: string) => {
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // <--- Pegamos o usuário logado
+
+  const isAdmin = user?.role === 'ADMIN'; // <--- Verificação simples
 
   const {
     data: post,
@@ -99,6 +101,16 @@ export default function PostPage() {
         <div className="flex flex-1 flex-col items-center justify-center text-center text-red-400 px-4">
           <FiAlertTriangle className="text-4xl mb-2" />
           <p>{errorMessage}</p>
+          
+          {/* Se for admin e o post sumiu (ex: apagado), botão pra voltar */}
+          {isAdmin && (
+             <Link
+               to="/admin/reports"
+               className="mt-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+             >
+               Voltar ao Tribunal
+             </Link>
+          )}
         </div>
       );
     }
@@ -153,29 +165,43 @@ export default function PostPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white relative overflow-hidden">
-      {/* Botão de Voltar (para o caso de navegação interna) */}
+      
+      {/* Botão Voltar (Padrão) */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-6 left-4 z-50 p-2 bg-black/30 rounded-full"
+        className="absolute top-6 left-4 z-50 p-2 bg-black/30 rounded-full hover:bg-black/50 transition-colors"
       >
-        <FiArrowLeft className="w-5 h-5" />
+        <FiArrowLeft className="w-5 h-5 text-white" />
       </button>
+
+      {/* --- BOTÃO EXCLUSIVO DE ADMIN (Tribunal) --- */}
+      {isAdmin && (
+        <Link
+          to="/admin/reports"
+          className="absolute top-6 right-4 z-50 flex items-center gap-2 bg-red-600/90 hover:bg-red-700 text-white px-4 py-2 rounded-full font-bold shadow-lg backdrop-blur-sm transition-all text-sm border border-red-500"
+        >
+          <FiShield className="w-4 h-4" />
+          Voltar para Denúncias
+        </Link>
+      )}
 
       {/* Conteúdo Principal */}
       {renderContent()}
 
-      {/* Footer "Call to Action" */}
-      <div className="py-4 px-4 border-t border-gray-800 bg-gray-950 z-20 text-center">
-        <p className="text-sm text-gray-300 mb-3">
-          Viu este post e gostou?
-        </p>
-        <Link
-          to="/register"
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full transition-colors"
-        >
-          Junte-se ao CosmosMatch
-        </Link>
-      </div>
+      {/* Footer "Call to Action" (Só aparece se NÃO estiver logado) */}
+      {!user && (
+        <div className="py-4 px-4 border-t border-gray-800 bg-gray-950 z-20 text-center">
+          <p className="text-sm text-gray-300 mb-3">
+            Viu este post e gostou?
+          </p>
+          <Link
+            to="/register"
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full transition-colors"
+          >
+            Junte-se ao CosmosMatch
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

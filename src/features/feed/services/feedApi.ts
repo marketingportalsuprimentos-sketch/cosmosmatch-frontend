@@ -1,14 +1,27 @@
 // src/features/feed/services/feedApi.ts
-// (COLE ISTO NO SEU ARQUIVO)
 
 import { api } from '@/services/api';
+
+// --- ENUMS ---
 
 export enum MediaType {
   PHOTO = 'PHOTO',
   VIDEO = 'VIDEO',
 }
 
-// --- INÍCIO DA ATUALIZAÇÃO ---
+export enum ReportReason {
+  DISLIKE = 'DISLIKE',
+  BULLYING = 'BULLYING',
+  SELF_HARM = 'SELF_HARM',
+  VIOLENCE = 'VIOLENCE',
+  RESTRICTED_ITEMS = 'RESTRICTED_ITEMS',
+  NUDITY = 'NUDITY',
+  SPAM_SCAM = 'SPAM_SCAM',
+  FALSE_INFO = 'FALSE_INFO',
+}
+
+// --- INTERFACES ---
+
 export interface FeedPost {
   id: string;
   content: string | null;
@@ -19,18 +32,23 @@ export interface FeedPost {
   expiresAt: string;
   authorId: string;
   
-  // Novos campos do backend (baseados no schema.prisma e no 'post.service.ts')
+  // Campos de interação
   likesCount: number;
   commentsCount: number;
-  
-  // Campo de estado (calculado no 'post.service.ts')
   isLikedByMe: boolean; 
-  
-  // Campos antigos removidos
-  // userHasLiked: boolean; // REMOVIDO
-  // _count: { likes: number; comments: number }; // REMOVIDO
+
+  // --- NOVO CAMPO: Essencial para o efeito Blur ---
+  isHidden?: boolean; 
 }
-// --- FIM DA ATUALIZAÇÃO ---
+
+export interface FeedDeck {
+  author: { 
+    id: string; 
+    name: string; 
+    profile?: { imageUrl?: string | null } 
+  };
+  posts: FeedPost[];
+}
 
 export interface CreatedPost {
   id: string;
@@ -42,25 +60,6 @@ export interface CreatedPost {
   authorId: string;
 }
 
-export interface FeedDeck {
-  author: { id: string; name: string; profile?: { imageUrl?: string | null } };
-  posts: FeedPost[];
-}
-
-// --- INÍCIO DA ADIÇÃO (Post Público) ---
-// O tipo do post público que inclui os dados do autor
-export interface PublicPost extends FeedPost {
-  author: {
-    id: string;
-    name: string;
-    profile: {
-      imageUrl: string | null;
-    } | null;
-  };
-}
-// --- FIM DA ADIÇÃO ---
-
-
 export interface PostComment {
   id: string;
   content: string;
@@ -70,11 +69,29 @@ export interface PostComment {
   user: { id: string; name: string; profile?: { imageUrl?: string | null } };
 }
 
-interface CreateCommentData { content: string; }
+export interface PublicPost extends FeedPost {
+  author: {
+    id: string;
+    name: string;
+    profile: { imageUrl: string | null } | null;
+  };
+}
 
-export const getFeedPage = async (pageParam = 1): Promise<FeedDeck | null> => {
+interface CreateCommentData { content: string; }
+interface ReportPostData { reason: ReportReason; }
+
+
+// --- FUNÇÕES DE API ---
+
+// 1. Feed e Posts
+export const getFeed = async (params: { skip: number; take: number }): Promise<FeedDeck | null> => {
   try {
-    const { data } = await api.get<FeedDeck | null>(`/post/feed?page=${pageParam}`);
+    const { data } = await api.get<FeedDeck | null>('/post/feed', { 
+      params: { 
+        skip: params.skip, 
+        take: params.take 
+      } 
+    });
     return data;
   } catch (error: any) {
     if (error?.response?.status === 404) return null;
@@ -83,11 +100,21 @@ export const getFeedPage = async (pageParam = 1): Promise<FeedDeck | null> => {
 };
 
 export const createPost = async (formData: FormData): Promise<CreatedPost> => {
-  // NÃO definir headers aqui — o Axios monta boundary automaticamente.
   const { data } = await api.post<CreatedPost>('/post', formData);
   return data;
 };
 
+export const deletePost = async (postId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await api.delete(`/post/${postId}`);
+  return response.data;
+};
+
+export const getPostById = async (postId: string): Promise<PublicPost> => {
+  const { data } = await api.get<PublicPost>(`/post/${postId}`);
+  return data;
+};
+
+// 2. Interações (Like/Comment)
 export const likePost = async (postId: string) => {
   const { data } = await api.post<{ success: boolean }>(`/post/${postId}/like`);
   return data;
@@ -108,24 +135,14 @@ export const getPostComments = async (postId: string) => {
   return data;
 };
 
-// --- INÍCIO DA ADIÇÃO (Post Público) ---
-/**
- * Busca um único post pelo ID. (Endpoint público)
- */
-export const getPostById = async (postId: string): Promise<PublicPost> => {
-  const { data } = await api.get<PublicPost>(`/post/${postId}`);
+// 3. Denúncias e Moderação
+export const reportPost = async (postId: string, payload: ReportPostData) => {
+  const { data } = await api.post<{ success: boolean }>(`/post/${postId}/report`, payload);
   return data;
 };
-// --- FIM DA ADIÇÃO ---
 
-// --- INÍCIO DA ADIÇÃO (Apagar Post) ---
-/**
- * Apaga um post (apenas o dono).
- */
-export const deletePost = async (
-  postId: string,
-): Promise<{ success: boolean; message: string }> => {
-  const response = await api.delete(`/post/${postId}`);
-  return response.data;
+// --- NOVA FUNÇÃO: Restaurar Post (Para usar no botão do Admin) ---
+export const restorePost = async (postId: string) => {
+  const { data } = await api.patch<{ success: boolean }>(`/post/${postId}/restore`);
+  return data;
 };
-// --- FIM DA ADIÇÃO ---

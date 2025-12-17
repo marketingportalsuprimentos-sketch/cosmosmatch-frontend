@@ -1,220 +1,204 @@
 // frontend/src/pages/PleaseVerifyPage.tsx
-import { useState } from 'react';
-import {
-  FiMail,
-  FiLogOut,
-  FiLoader,
-  FiEdit2,
-  FiArrowRight,
-  FiAlertCircle,
-} from 'react-icons/fi';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  useResendVerificationEmail,
-  useUpdateUnverifiedEmail,
-} from '@/features/auth/hooks/useAuthMutations';
-import { useNavigate } from 'react-router-dom';
+import { 
+  useResendVerificationEmail, 
+  useUpdateUnverifiedEmail 
+} from '@/features/auth/hooks/useAuthMutations'; 
+import { FiMail, FiArrowRight, FiLogOut, FiEdit2, FiSave, FiX, FiLock } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from '@/lib/toast';
 
-export function PleaseVerifyPage() {
-  const { user, logout, setUser } = useAuth();
+export default function PleaseVerifyPage() {
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-
-  // === ESTADO LOCAL (para os formulários) ===
-  const [showCorrectForm, setShowCorrectForm] = useState(false);
-  const [newEmail, setNewEmail] = useState(user?.email || '');
+  
+  // Estados para edição de email
+  const [isEditing, setIsEditing] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // === MUTAÇÃO 1: Reenviar Email ===
-  const { mutate: resendEmail, isPending: isResending } =
-    useResendVerificationEmail();
+  // Hooks
+  const { mutate: resendEmail, isPending: isResending } = useResendVerificationEmail();
+  const { mutate: updateEmail, isPending: isUpdating } = useUpdateUnverifiedEmail();
 
-  // === MUTAÇÃO 2: Corrigir Email ===
-  const {
-    mutate: correctEmail,
-    isPending: isCorrecting,
-    error: correctError,
-  } = useUpdateUnverifiedEmail();
+  // Atualiza o e-mail no formulário se o usuário mudar
+  useEffect(() => {
+    if (user?.email) {
+      setNewEmail(user.email);
+    }
+  }, [user?.email]);
 
-  // === Handlers ===
-  const handleResendClick = () => {
-    if (isResending || isCorrecting) return;
-    resendEmail();
-  };
-
-  const handleCorrectSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isResending || isCorrecting || !user) return;
+  // === LÓGICA DO PRAZO DE GRAÇA (3 DIAS / 72H) ===
+  let isWithinGracePeriod = false;
+  if (user?.createdAt) {
+    const createdDate = new Date(user.createdAt);
+    const now = new Date();
+    // Diferença em horas
+    const diffHours = Math.abs(now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
     
-    correctEmail({ newEmail, password });
-    
-    if (!correctError) {
-      setShowCorrectForm(false);
-      setPassword('');
+    if (diffHours <= 72) {
+      isWithinGracePeriod = true;
+    }
+  }
+
+  const handleResend = () => {
+    if (user?.id) {
+      resendEmail(user.id, { 
+        onSuccess: () => toast.success('Link reenviado para sua caixa de entrada!'),
+        onError: () => toast.error('Erro ao reenviar. Tente novamente.'),
+      });
     }
   };
 
-  const handleContinue = () => {
-    // --- INÍCIO DA CORREÇÃO (O erro 404 está aqui) ---
-    // O botão estava a apontar para o sítio errado.
-    // O caminho correto é /profile/edit.
-    navigate('/profile/edit');
-    // --- FIM DA CORREÇÃO ---
+  const handleUpdateEmail = () => {
+    if (!newEmail || !password) {
+      toast.error('Preencha o novo email e sua senha atual.');
+      return;
+    }
+
+    if (user?.id) {
+      updateEmail(
+        { userId: user.id, data: { newEmail, password } },
+        {
+          onSuccess: () => {
+            // 1. FECHA O MODO DE EDIÇÃO (Volta para a tela anterior)
+            setIsEditing(false);
+            
+            // 2. Limpa a senha por segurança
+            setPassword('');
+            
+            // 3. Feedback visual
+            toast.success('Email atualizado! Enviamos um novo link.');
+          }
+        }
+      );
+    }
+  };
+
+  const handleLogout = () => {
+    signOut();
+    navigate('/login');
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-900 p-4 text-white">
-      <div className="w-full max-w-md rounded-lg bg-gray-800 p-8 shadow-xl">
-        <div className="flex flex-col items-center text-center">
-          <FiMail className="h-16 w-16 text-indigo-400" />
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
-            Verifique o seu email
-          </h1>
-          <p className="mt-4 text-gray-400">
-            Enviámos um link de verificação para:
-          </p>
-          <p className="text-lg font-bold text-indigo-300">{user?.email}</p>
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 text-white">
+      <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8 text-center space-y-6 border border-gray-700">
+        
+        <div className="flex justify-center">
+          <div className="bg-purple-900/50 p-4 rounded-full border border-purple-500/30">
+            <FiMail className="w-12 h-12 text-purple-400" />
+          </div>
+        </div>
 
-          <p className="mt-2 text-gray-400">
-            Pode continuar para o seu perfil, mas precisará de verificar o email
-            para aceder a todas as funcionalidades.
-          </p>
-
-          {/* Formulário de Correção (Condicional) */}
-          {showCorrectForm ? (
-            <form
-              onSubmit={handleCorrectSubmit}
-              className="mt-6 w-full animate-fadeIn"
+        <h1 className="text-2xl font-bold">Verifique seu Email</h1>
+        
+        {/* === MODO VISUALIZAÇÃO (Tela Padrão) === */}
+        {!isEditing ? (
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-700 animate-in fade-in zoom-in duration-300">
+            <p className="text-gray-400 text-sm mb-1">Enviamos um link para:</p>
+            {/* O email aqui atualiza sozinho via Contexto */}
+            <p className="font-semibold text-white text-lg break-all">{user?.email}</p>
+            
+            <button 
+              onClick={() => {
+                setNewEmail(user?.email || '');
+                setIsEditing(true);
+              }}
+              className="text-purple-400 hover:text-purple-300 text-sm flex items-center justify-center gap-1 mx-auto mt-2 transition-colors"
             >
-              <h3 className="text-lg font-semibold text-white">
-                Corrigir email
-              </h3>
-              <div className="mt-4 space-y-4 text-left">
-                <div>
-                  <label
-                    htmlFor="newEmail"
-                    className="block text-sm font-medium leading-6 text-gray-300"
-                  >
-                    Novo endereço de email
-                  </label>
-                  <input
-                    type="email"
-                    id="newEmail"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    required
-                    className="mt-1 block w-full rounded-md border-0 bg-gray-700 p-2 text-white shadow-sm ring-1 ring-inset ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium leading-6 text-gray-300"
-                  >
-                    Confirme a sua senha
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="mt-1 block w-full rounded-md border-0 bg-gray-700 p-2 text-white shadow-sm ring-1 ring-inset ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                  />
-                </div>
-                {correctError && (
-                  <div className="flex items-center text-sm text-red-400">
-                    <FiAlertCircle className="mr-2 h-4 w-4" />
-                    {(correctError as any).response?.data?.message ||
-                      'Erro ao atualizar'}
-                  </div>
-                )}
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCorrectForm(false)}
-                    disabled={isCorrecting}
-                    className="flex-1 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-600 disabled:opacity-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isCorrecting || isResending}
-                    className="flex flex-1 items-center justify-center rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 disabled:opacity-50"
-                  >
-                    {isCorrecting ? (
-                      <FiLoader className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <FiMail className="mr-2 h-5 w-5" />
-                    )}
-                    {isCorrecting
-                      ? 'A guardar...'
-                      : 'Guardar e Reenviar'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          ) : (
-            /* Botões de Ação (Padrão) */
-            <div className="mt-6 w-full space-y-4">
-              <button
-                onClick={handleContinue}
-                className="flex w-full items-center justify-center rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400"
-              >
-                Continuar para o Perfil
-                <FiArrowRight className="ml-2 h-5 w-5" />
-              </button>
-
+              <FiEdit2 className="w-3 h-3" /> O e-mail está errado?
+            </button>
+          </div>
+        ) : (
+          /* === MODO EDIÇÃO (Formulário) === */
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-700 space-y-3 animate-in fade-in zoom-in duration-300">
+            <p className="text-sm text-white font-bold text-left">Corrigir Endereço:</p>
+            
+            <div className="space-y-2">
+              <input
+                type="email"
+                placeholder="Novo e-mail correto"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white focus:border-purple-500 outline-none"
+              />
+              
               <div className="relative">
-                <div
-                  className="absolute inset-0 flex items-center"
-                  aria-hidden="true"
-                >
-                  <div className="w-full border-t border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-gray-800 px-2 text-gray-400">
-                    Ou
-                  </span>
-                </div>
+                <input
+                  type="password"
+                  placeholder="Confirme sua senha atual"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white focus:border-purple-500 outline-none pr-10"
+                />
+                <FiLock className="absolute right-3 top-3 text-gray-500" />
               </div>
+            </div>
 
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setShowCorrectForm(true)}
-                  disabled={isResending || isCorrecting}
-                  className="flex flex-1 items-center justify-center rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-600 disabled:opacity-50"
-                >
-                  <FiEdit2 className="mr-2 h-5 w-5" />
-                  Corrigir email
-                </button>
-                <button
-                  onClick={handleResendClick}
-                  disabled={isResending || isCorrecting}
-                  className="flex flex-1 items-center justify-center rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-600 disabled:opacity-50"
-                >
-                  {isResending ? (
-                    <FiLoader className="mr-2 h-5 w-5 animate-spin" />
-                  ) : (
-                    <FiMail className="mr-2 h-5 w-5" />
-                  )}
-                  {isResending ? 'A reenviar...' : 'Reenviar email'}
-                </button>
-              </div>
-
+            <div className="flex gap-2">
               <button
-                onClick={logout}
-                className="flex w-full items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-semibold text-gray-400 shadow-sm hover:text-white"
+                onClick={() => setIsEditing(false)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm transition-colors flex items-center justify-center gap-1"
               >
-                <FiLogOut className="mr-2 h-5 w-5" />
-                Fazer Logout
+                <FiX /> Cancelar
+              </button>
+              <button
+                onClick={handleUpdateEmail}
+                disabled={isUpdating}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded text-sm transition-colors flex items-center justify-center gap-1 font-bold"
+              >
+                {isUpdating ? <span className="animate-pulse">Salvando...</span> : <><FiSave /> Salvar</>}
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* === BOTÕES DE AÇÃO (Só aparecem quando NÃO está editando) === */}
+        {!isEditing && (
+          <div className="space-y-3 pt-2">
+            
+            <button
+              onClick={handleResend}
+              disabled={isResending}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 shadow-lg mb-4"
+            >
+              {isResending ? 'Enviando...' : 'Reenviar Link'}
+            </button>
+
+            {/* --- PRAZO DE GRAÇA: Botão "Continuar" --- */}
+            {isWithinGracePeriod ? (
+              <div className="pt-4 border-t border-gray-700">
+                <p className="text-sm text-gray-400 mb-3">
+                  Você pode confirmar o email depois.
+                </p>
+                
+                {/* BOTÃO CORRIGIDO PARA ONBOARDING */}
+                <Link
+                  to="/onboarding"
+                  className="w-full flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors border border-gray-600"
+                >
+                  Continuar para o Perfil <FiArrowRight />
+                </Link>
+              </div>
+            ) : (
+              <div className="pt-4 border-t border-red-900/30">
+                <p className="text-sm text-red-400 font-semibold bg-red-900/20 p-2 rounded border border-red-900/50">
+                  🚫 Seu período de teste acabou. Verifique o email para continuar.
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleLogout}
+              className="text-gray-500 hover:text-white text-sm flex items-center justify-center gap-2 mx-auto mt-6"
+            >
+              <FiLogOut /> Sair / Trocar Conta
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-export default PleaseVerifyPage;

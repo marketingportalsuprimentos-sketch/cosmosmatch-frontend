@@ -1,9 +1,9 @@
-// src/router/index.tsx
+// frontend/src/router/index.tsx
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 
-// --- GRUPO 1: PÁGINAS COM "EXPORT DEFAULT" (Sem chaves) ---
+// Páginas
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -14,12 +14,10 @@ import PleaseVerifyPage from '@/pages/PleaseVerifyPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import EditProfilePage from '@/pages/EditProfilePage';
 import BlockedProfilesPage from '@/pages/BlockedProfilesPage';
-// --- CORREÇÃO: Movidos para cá (Default) ---
 import NatalChartPage from '@/pages/NatalChartPage';
 import PostPage from '@/pages/PostPage';
 import NumerologyReportPage from '@/pages/NumerologyReportPage';
 
-// --- GRUPO 2: PÁGINAS COM "EXPORT CONST" (Com chaves { }) ---
 import { FeedPage } from '@/pages/FeedPage';
 import { DiscoveryPage } from '@/pages/DiscoveryPage';
 import { ChatListPage } from '@/pages/ChatListPage';
@@ -28,44 +26,59 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { OnboardingProfilePage } from '@/pages/OnboardingProfilePage';
 import { PremiumPage } from '@/pages/PremiumPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { AdminReportsPage } from '@/pages/AdminReportsPage';
 import { SearchPage } from '@/pages/SearchPage';
 import { SynastryReportPage } from '@/pages/SynastryReportPage';
-
-// --- PÁGINAS NOVAS (Com chaves) ---
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { TermsPage } from '@/pages/TermsPage';
-
-// Layout
 import { AppLayout } from '@/components/layout/AppLayout';
 
 export const Router = () => {
   const { user } = useAuth();
   const isAuthenticated = !!user;
 
-  // Lógica de Validação de Email
+  // 1. Verificação de Email
   const isVerified = 
     (user as any)?.isEmailVerified === true || 
     (user as any)?.emailVerified === true || 
     (user as any)?.email_verified === true ||
     (user as any)?.verified === true;
 
-  // Lógica de 36 Horas
+  // 2. Cálculo do Prazo (3 Dias / 72h)
   let isWithinGracePeriod = false;
   if (user?.createdAt) {
     const createdDate = new Date(user.createdAt);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    if (diffHours <= 36) {
+    const diffHours = Math.abs(now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
+    if (diffHours <= 72) {
       isWithinGracePeriod = true;
     }
   }
 
+  // 3. Verificação de Onboarding (Se tem data de nascimento, já fez o setup)
+  const hasCompletedOnboarding = !!(user as any)?.profile?.birthDate;
+
+  // --- LÓGICA MESTRA DE REDIRECIONAMENTO ---
   const getRedirectPath = () => {
-    if (isVerified || isWithinGracePeriod) {
-      return "/discovery";
+    // A. BLOQUEIO FATAL: Se não verificou e o prazo ACABOU -> Tela de Bloqueio.
+    if (!isVerified && !isWithinGracePeriod) {
+      return "/please-verify";
     }
-    return "/please-verify";
+
+    // B. PRIMEIRO ACESSO (O Pulo do Gato 😺): 
+    // Se não verificou E ainda não tem perfil (acabou de registrar) -> Tela de Aviso.
+    // Isso garante que após o registro ele veja a tela de email antes do Onboarding.
+    if (!isVerified && !hasCompletedOnboarding) {
+      return "/please-verify";
+    }
+
+    // C. Se já viu a tela de email (clicou em continuar) mas não tem perfil -> Onboarding
+    if (!hasCompletedOnboarding) {
+      return "/onboarding";
+    }
+
+    // D. Tudo certo -> App Liberado
+    return "/discovery";
   };
 
   const router = createBrowserRouter([
@@ -75,18 +88,11 @@ export const Router = () => {
     },
     
     // Rotas Públicas
+    { path: '/login', element: !isAuthenticated ? <LoginPage /> : <Navigate to={getRedirectPath()} replace /> },
+    { path: '/register', element: !isAuthenticated ? <RegisterPage /> : <Navigate to={getRedirectPath()} replace /> },
+    
     { path: '/privacy', element: <PrivacyPage /> },
     { path: '/terms', element: <TermsPage /> },
-
-    // Auth
-    {
-      path: '/login',
-      element: !isAuthenticated ? <LoginPage /> : <Navigate to={getRedirectPath()} replace />,
-    },
-    {
-      path: '/register',
-      element: !isAuthenticated ? <RegisterPage /> : <Navigate to={getRedirectPath()} replace />,
-    },
     { path: '/forgot-password', element: <ForgotPasswordPage /> },
     { path: '/reset-password', element: <ResetPasswordPage /> },
     { path: '/verify-email', element: <VerifyEmailPage /> },
@@ -118,6 +124,7 @@ export const Router = () => {
         { path: '/natal-chart', element: <NatalChartPage /> },
         { path: '/premium', element: <PremiumPage /> },
         { path: '/admin', element: <AdminPage /> },
+        { path: '/admin/reports', element: <AdminReportsPage /> },
         { path: '/post/:id', element: <PostPage /> },
       ],
     },

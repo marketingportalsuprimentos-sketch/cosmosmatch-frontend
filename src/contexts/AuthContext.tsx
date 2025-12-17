@@ -1,4 +1,5 @@
 // frontend/src/contexts/AuthContext.tsx
+
 import {
   createContext,
   useContext,
@@ -12,6 +13,8 @@ import type { ReactNode } from 'react';
 import { api } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
+// CORREÇÃO: Renomeamos para 'sonnerToast' para evitar conflitos com outros toasts do projeto
+import { toast as sonnerToast } from 'sonner'; 
 
 export interface Subscription {
   id: string;
@@ -27,6 +30,11 @@ interface User {
   subscription: Subscription | null;
   createdAt?: string;
   updatedAt?: string;
+  profile?: {
+    birthDate?: string;
+    birthTime?: string;
+    birthCity?: string;
+  };
 }
 
 type AuthUser = User | null;
@@ -42,7 +50,6 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --- CORREÇÃO AQUI: Mudamos o padrão para 3000 ---
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -59,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let fetchedUser: AuthUser = null;
       if (token) {
         try {
-          const response = await api.get<User>('/auth/profile');
+          const response = await api.get<User>('/auth/me');
           fetchedUser = response.data;
           console.log('AuthContext: Token validado. User:', fetchedUser.username);
         } catch (error: any) {
@@ -95,12 +102,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const newSocket = io(BACKEND_URL, {
         auth: { token: token },
-        transports: ['websocket'], // Força websocket para evitar erros de polling
+        transports: ['websocket'],
       });
 
       newSocket.on('connect', () => {
         console.log(`AuthContext (Socket): Conectado! ID: ${newSocket.id}`);
       });
+
+      // --- CORREÇÃO: Lógica de Notificação Segura ---
+      newSocket.on('system:notification', (data: any) => {
+        console.log('🔔 Notificação recebida:', data);
+        
+        // Se a mensagem não for para mim, ignoro
+        if (data.targetUserId && data.targetUserId !== user.id) {
+            return; 
+        }
+
+        // Usa 'sonnerToast' para garantir que é a biblioteca certa
+        if (data.type === 'error') {
+          sonnerToast.error(data.title, { description: data.message, duration: 5000 });
+        } else {
+          // Para mensagens genéricas, usamos a função base
+          sonnerToast(data.title, { description: data.message, duration: 5000 });
+        }
+      });
+      // -----------------------------------------------------------
 
       newSocket.on('connect_error', (err) => {
         console.error(`AuthContext (Socket): Erro de conexão.`, err.message);

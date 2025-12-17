@@ -1,5 +1,4 @@
 // frontend/src/pages/ProfilePage.tsx
-// (ATUALIZADO: Altura de 350px para Galeria E Conexões)
 
 import { Fragment, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -14,6 +13,7 @@ import {
   useGetFollowers,
   useBlockUser,
 } from '@/features/profile/hooks/useProfile';
+import { deleteMyAccount } from '@/features/profile/services/profileApi'; // <--- Importado a função de deletar
 import { SendMessageModal } from '@/features/chat/components/SendMessageModal';
 import { ProfileGalleryGrid } from '@/features/profile/components/ProfileGalleryGrid';
 import { GalleryPhotoViewerModal } from '@/features/profile/components/GalleryPhotoViewerModal';
@@ -44,6 +44,7 @@ import {
   AdjustmentsHorizontalIcon,
   DocumentTextIcon,
   ShieldCheckIcon,
+  TrashIcon, // <--- Importado ícone de lixo
 } from '@heroicons/react/24/solid';
 
 // Tipos
@@ -59,6 +60,7 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
   const navigate = useNavigate();
   const avatarUrl = profile.imageUrl ?? null;
   const targetUserId = profile.userId;
+  const { logout } = useAuth();
 
   const [isQuizModalOpen, setQuizModalOpen] = useState(false);
 
@@ -112,11 +114,35 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
     });
   };
 
-  const { logout } = useAuth();
+  // --- LÓGICA DE LOGOUT E EXCLUSÃO ---
 
   const handleLogout = () => {
     if (window.confirm('Tem a certeza que quer sair?')) {
       logout();
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Tem certeza? Sua conta ficará em quarentena por 40 dias.\n\nSe não fizer login nesse período, ela será apagada permanentemente.'
+    );
+
+    if (confirmed) {
+      const doubleCheck = window.prompt('Digite "DELETAR" para confirmar a exclusão:');
+      if (doubleCheck === 'DELETAR') {
+        try {
+          // Chama a API que criamos
+          await deleteMyAccount();
+          alert('Sua conta foi agendada para exclusão. Você será desconectado.');
+          logout(); // Limpa o token
+          navigate('/login'); // Manda para login
+        } catch (error) {
+          console.error(error);
+          toast.error('Erro ao excluir conta. Tente novamente.');
+        }
+      } else if (doubleCheck !== null) {
+        toast.error('Confirmação incorreta.');
+      }
     }
   };
 
@@ -209,14 +235,34 @@ const ProfileHeader = ({ profile, isOwner }: { profile: Profile; isOwner: boolea
                         <button
                           onClick={handleLogout}
                           className={`${
-                            active ? 'bg-red-600 text-white' : 'text-red-400'
+                            active ? 'bg-gray-600 text-white' : 'text-gray-200'
                           } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                         >
                           <ArrowRightOnRectangleIcon
-                            className="mr-2 h-5 w-5 text-red-400 group-hover:text-white"
+                            className="mr-2 h-5 w-5 text-gray-400 group-hover:text-white"
                             aria-hidden="true"
                           />
                           Sair (Logout)
+                        </button>
+                      )}
+                    </Menu.Item>
+                  </div>
+
+                  {/* ZONA DE PERIGO (Excluir Conta) */}
+                  <div className="px-1 py-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={handleDeleteAccount}
+                          className={`${
+                            active ? 'bg-red-600 text-white' : 'text-red-400'
+                          } group flex w-full items-center rounded-md px-2 py-2 text-sm font-semibold`}
+                        >
+                          <TrashIcon
+                            className="mr-2 h-5 w-5 text-red-400 group-hover:text-white"
+                            aria-hidden="true"
+                          />
+                          Excluir Conta
                         </button>
                       )}
                     </Menu.Item>
@@ -638,7 +684,6 @@ const ProfileConnections = ({
         </button>
       </div>
 
-      {/* --- CORREÇÃO: ALTURA MÁXIMA NA LISTA DE CONEXÕES (350px) --- */}
       <div className="max-h-[350px] overflow-y-auto pr-2">
         {activeTab === 'followers' ? (
           <ConnectionList
@@ -782,7 +827,6 @@ export function ProfilePage() {
           loggedInUserStatus={loggedInUserStatus}
         />
 
-        {/* --- CORREÇÃO: ALTURA MÁXIMA NA GALERIA (350px) --- */}
         <div className="max-h-[350px] overflow-y-auto rounded-lg">
           <ProfileGalleryGrid
             photos={photos}
