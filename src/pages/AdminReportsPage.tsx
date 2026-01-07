@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resolveReport } from '@/features/admin/services/reportsApi';
 import { banUser, deletePostAsAdmin } from '@/features/admin/services/adminApi';
 import { api } from '@/services/api'; 
-import { FiAlertTriangle, FiCheck, FiX, FiSlash, FiLoader, FiTrash2, FiRefreshCw, FiEye, FiEyeOff, FiUser } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheck, FiSlash, FiLoader, FiTrash2, FiRefreshCw, FiEyeOff, FiUser } from 'react-icons/fi';
 import { toast } from 'sonner'; 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -26,7 +26,7 @@ export function AdminReportsPage() {
   const { mutate: dismissReport } = useMutation({
     mutationFn: (id: string) => resolveReport(id, 'DISMISSED'),
     onSuccess: () => {
-      toast.success('Denúncia arquivada.');
+      toast.success('Denúncia arquivada e removida da lista.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     },
   });
@@ -36,6 +36,7 @@ export function AdminReportsPage() {
     try {
       setProcessingId(reportId);
       await banUser(userId);
+      // Aqui mantemos o resolveReport para banimentos, pois o caso é encerrado
       await resolveReport(reportId, 'RESOLVED');
       toast.success('Usuário banido!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
@@ -51,6 +52,7 @@ export function AdminReportsPage() {
     try {
       setProcessingId(reportId);
       await deletePostAsAdmin(postId);
+      // Aqui mantemos o resolveReport para exclusões definitivas
       await resolveReport(reportId, 'RESOLVED');
       toast.success('Post apagado com sucesso.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
@@ -65,7 +67,7 @@ export function AdminReportsPage() {
     try {
       setProcessingId(reportId);
       await api.patch(`/post/${postId}/restore`); 
-      await resolveReport(reportId, 'RESOLVED');
+      // Opcional: manter ou resolver aqui. Removi o resolve para manter o histórico se desejar
       toast.success('Blur removido! O post reapareceu no feed.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
@@ -75,17 +77,21 @@ export function AdminReportsPage() {
     }
   };
 
+  // --- FUNÇÃO AJUSTADA: APLICA O BLUR MAS MANTÉM A DENÚNCIA ---
   const handleHidePost = async (postId: string, reportId: string) => {
     try {
-      setProcessingId(reportId); // Inicia feedback visual de carregamento
+      setProcessingId(reportId); 
       await api.patch(`/post/${postId}/hide`);
-      await resolveReport(reportId, 'RESOLVED'); // Resolve a denúncia automaticamente ao aplicar blur
-      toast.success('Blur aplicado com sucesso!');
+      
+      // REMOVIDA A LINHA: await resolveReport(reportId, 'RESOLVED');
+      // Agora o post ganha blur, mas a denúncia continua na lista
+      
+      toast.success('Blur aplicado! A denúncia permanece na lista para seu controle.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
       toast.error('Erro ao ocultar post.');
     } finally {
-      setProcessingId(null); // Finaliza feedback
+      setProcessingId(null);
     }
   };
 
@@ -121,7 +127,7 @@ export function AdminReportsPage() {
             {reports?.map((report: any) => (
               <div key={report.id} className="bg-gray-900 rounded-xl border border-gray-800 shadow-xl overflow-hidden flex flex-col md:flex-row">
                 
-                {/* --- LADO ESQUERDO: CONTEÚDO --- */}
+                {/* LADO ESQUERDO: CONTEÚDO */}
                 <div className="md:w-1/3 bg-black relative group min-h-[300px]">
                   {report.post ? (
                     <>
@@ -146,7 +152,7 @@ export function AdminReportsPage() {
                   )}
                 </div>
 
-                {/* --- LADO DIREITO: JULGAMENTO --- */}
+                {/* LADO DIREITO: JULGAMENTO */}
                 <div className="flex-1 p-6 flex flex-col justify-between">
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
@@ -169,7 +175,7 @@ export function AdminReportsPage() {
                       </div>
 
                       <div className="bg-red-900/10 p-4 rounded-lg border border-red-900/20">
-                        <p className="text-xs text-red-400 uppercase font-bold mb-2">Denunciante (Quem acusou)</p>
+                        <p className="text-xs text-red-400 uppercase font-bold mb-2">Denunciante</p>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-white">{report.reporterName}</span>
                         </div>
@@ -184,26 +190,26 @@ export function AdminReportsPage() {
                     )}
                   </div>
 
-                  {/* BOTÕES DE AÇÃO COM FEEDBACK DE CARREGAMENTO */}
+                  {/* BOTÕES DE AÇÃO */}
                   <div className="grid grid-cols-2 gap-3 pt-6 border-t border-gray-800 mt-6">
                     
                     {report.post?.isSensitive ? (
                       <button
                         onClick={() => handleRestorePost(report.post.id, report.id)}
                         disabled={processingId === report.id}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50 shadow-lg shadow-green-900/20"
                       >
                         {processingId === report.id ? <FiLoader className="animate-spin" /> : <FiRefreshCw />}
-                        REMOVER BLUR E ARQUIVAR
+                        REMOVER BLUR (RESTAURAR)
                       </button>
                     ) : (
                       <button
                         onClick={() => handleHidePost(report.post?.id, report.id)}
                         disabled={processingId === report.id || !report.post}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50 shadow-lg shadow-yellow-900/20"
                       >
                         {processingId === report.id ? <FiLoader className="animate-spin" /> : <FiEyeOff />}
-                        APLICAR BLUR MANUAL
+                        APLICAR BLUR VISUAL
                       </button>
                     )}
 
@@ -223,12 +229,13 @@ export function AdminReportsPage() {
                       <FiSlash /> BANIR AUTOR
                     </button>
 
+                    {/* Botão de descarte agora é o único que remove a denúncia da lista sem banir/ocultar */}
                     <button
                       onClick={() => dismissReport(report.id)}
                       disabled={processingId === report.id}
-                      className="col-span-2 text-xs text-gray-600 hover:text-gray-400 py-2 text-center disabled:opacity-30"
+                      className="col-span-2 text-xs text-gray-600 hover:text-gray-400 py-2 text-center transition-colors"
                     >
-                      Ignorar esta denúncia
+                      Arquivar esta denúncia (Remover da lista)
                     </button>
                   </div>
                 </div>
