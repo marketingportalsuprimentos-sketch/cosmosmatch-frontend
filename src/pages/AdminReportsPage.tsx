@@ -1,10 +1,11 @@
 // frontend/src/pages/AdminReportsPage.tsx
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resolveReport } from '@/features/admin/services/reportsApi';
 import { banUser, deletePostAsAdmin } from '@/features/admin/services/adminApi';
 import { api } from '@/services/api'; 
-import { FiAlertTriangle, FiCheck, FiX, FiSlash, FiLoader, FiTrash2, FiRefreshCw, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheck, FiX, FiSlash, FiLoader, FiTrash2, FiRefreshCw, FiEye, FiEyeOff, FiUser } from 'react-icons/fi';
 import { toast } from 'sonner'; 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,6 +13,7 @@ import { Link } from 'react-router-dom';
 
 export function AdminReportsPage() {
   const queryClient = useQueryClient();
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ['admin', 'reports'],
@@ -20,8 +22,6 @@ export function AdminReportsPage() {
         return res.data;
     },
   });
-
-  // --- AÇÕES REFINADAS PARA SINCRONIA COM O BACKEND ---
 
   const { mutate: dismissReport } = useMutation({
     mutationFn: (id: string) => resolveReport(id, 'DISMISSED'),
@@ -34,47 +34,58 @@ export function AdminReportsPage() {
   const handleBanUser = async (userId: string, reportId: string) => {
     if (!window.confirm('🚨 PERIGO: Isso vai banir o usuário de todo o app. Confirmar?')) return;
     try {
+      setProcessingId(reportId);
       await banUser(userId);
       await resolveReport(reportId, 'RESOLVED');
       toast.success('Usuário banido!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
       toast.error('Erro ao banir usuário.');
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handleDeletePost = async (postId: string, reportId: string) => {
     if (!window.confirm('Apagar este post permanentemente?')) return;
     try {
+      setProcessingId(reportId);
       await deletePostAsAdmin(postId);
       await resolveReport(reportId, 'RESOLVED');
       toast.success('Post apagado com sucesso.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
       toast.error('Erro ao apagar post.');
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  // Ajustado para fechar a denúncia como RESOLVIDA ao restaurar
   const handleRestorePost = async (postId: string, reportId: string) => {
     try {
+      setProcessingId(reportId);
       await api.patch(`/post/${postId}/restore`); 
-      await resolveReport(reportId, 'RESOLVED'); // Marcamos como resolvido pois o admin já julgou [cite: 1]
+      await resolveReport(reportId, 'RESOLVED');
       toast.success('Blur removido! O post reapareceu no feed.');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
       toast.error('Erro ao restaurar post.');
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  // Ajustado para aplicar o campo isHidden que dispara o Blur no mobile [cite: 19, 21]
-  const handleHidePost = async (postId: string) => {
+  const handleHidePost = async (postId: string, reportId: string) => {
     try {
+      setProcessingId(reportId); // Inicia feedback visual de carregamento
       await api.patch(`/post/${postId}/hide`);
-      toast.success('Blur aplicado! O conteúdo agora está desfocado para os usuários.');
+      await resolveReport(reportId, 'RESOLVED'); // Resolve a denúncia automaticamente ao aplicar blur
+      toast.success('Blur aplicado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
     } catch (error) {
       toast.error('Erro ao ocultar post.');
+    } finally {
+      setProcessingId(null); // Finaliza feedback
     }
   };
 
@@ -117,19 +128,19 @@ export function AdminReportsPage() {
                       <img 
                         src={report.post.imageUrl} 
                         alt="Conteúdo" 
-                        className={`w-full h-full object-cover transition-all ${report.post.isHidden ? 'blur-md opacity-50' : 'opacity-90 group-hover:opacity-100'}`}
+                        className={`w-full h-full object-cover transition-all ${report.post.isSensitive ? 'blur-md opacity-50' : 'opacity-90 group-hover:opacity-100'}`}
                       />
-                      {report.post.isHidden && (
+                      {report.post.isSensitive && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                           <div className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center gap-2 shadow-2xl">
-                            <FiEyeOff /> Conteúdo Oculto (Blur)
+                            <FiEyeOff /> Conteúdo com Blur
                           </div>
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-500 flex-col gap-2">
-                      <FiX className="text-4xl" />
+                      <FiUser className="text-4xl" />
                       <span>Denúncia de Perfil</span>
                     </div>
                   )}
@@ -147,53 +158,75 @@ export function AdminReportsPage() {
                       </span>
                     </div>
 
-                    <div className="bg-gray-800/40 p-4 rounded-lg border border-gray-800">
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Autor do Post</p>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{report.reported.name}</span>
-                        {report.reported.isBanned && <span className="bg-red-600 text-[10px] px-1 rounded text-white">BANIDO</span>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-gray-800/40 p-4 rounded-lg border border-gray-800">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-2">Denunciado (Autor)</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{report.reportedName}</span>
+                          {report.reported?.isBanned && <span className="bg-red-600 text-[10px] px-1 rounded text-white">BANIDO</span>}
+                        </div>
+                        <p className="text-xs text-gray-500">{report.reported?.email}</p>
                       </div>
-                      <p className="text-xs text-gray-500">{report.reported.email}</p>
+
+                      <div className="bg-red-900/10 p-4 rounded-lg border border-red-900/20">
+                        <p className="text-xs text-red-400 uppercase font-bold mb-2">Denunciante (Quem acusou)</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{report.reporterName}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">{report.reporter?.email}</p>
+                      </div>
                     </div>
+
+                    {report.description && (
+                      <div className="bg-gray-800/20 p-3 rounded border-l-2 border-red-500 mt-2">
+                         <p className="text-sm text-gray-400 italic">"{report.description}"</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* BOTÕES DE AÇÃO SINCRONIZADOS */}
+                  {/* BOTÕES DE AÇÃO COM FEEDBACK DE CARREGAMENTO */}
                   <div className="grid grid-cols-2 gap-3 pt-6 border-t border-gray-800 mt-6">
                     
-                    {report.post?.isHidden ? (
+                    {report.post?.isSensitive ? (
                       <button
                         onClick={() => handleRestorePost(report.post.id, report.id)}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-all font-bold text-sm"
+                        disabled={processingId === report.id}
+                        className="col-span-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50"
                       >
-                        <FiRefreshCw className="animate-spin-slow" /> REMOVER BLUR E RESTAURAR
+                        {processingId === report.id ? <FiLoader className="animate-spin" /> : <FiRefreshCw />}
+                        REMOVER BLUR E ARQUIVAR
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleHidePost(report.post.id)}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white p-3 rounded-lg transition-all font-bold text-sm"
+                        onClick={() => handleHidePost(report.post?.id, report.id)}
+                        disabled={processingId === report.id || !report.post}
+                        className="col-span-2 flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white p-3 rounded-lg transition-all font-bold text-sm disabled:opacity-50"
                       >
-                        <FiEyeOff /> APLICAR BLUR MANUAL
+                        {processingId === report.id ? <FiLoader className="animate-spin" /> : <FiEyeOff />}
+                        APLICAR BLUR MANUAL
                       </button>
                     )}
 
                     <button
-                      onClick={() => handleDeletePost(report.post.id, report.id)}
-                      className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-red-900/40 text-gray-300 hover:text-red-400 p-3 rounded-lg border border-gray-700 transition-all text-sm"
+                      onClick={() => handleDeletePost(report.post?.id, report.id)}
+                      disabled={processingId === report.id || !report.post}
+                      className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-red-900/40 text-gray-300 hover:text-red-400 p-3 rounded-lg border border-gray-700 transition-all text-sm disabled:opacity-50"
                     >
                       <FiTrash2 /> APAGAR POST
                     </button>
 
                     <button
-                      onClick={() => handleBanUser(report.reported.id, report.id)}
-                      disabled={report.reported.isBanned}
-                      className="flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-lg border border-red-900/30 transition-all text-sm font-bold"
+                      onClick={() => handleBanUser(report.reportedId, report.id)}
+                      disabled={processingId === report.id || report.reported?.isBanned}
+                      className="flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-lg border border-red-900/30 transition-all text-sm font-bold disabled:opacity-50"
                     >
                       <FiSlash /> BANIR AUTOR
                     </button>
 
                     <button
                       onClick={() => dismissReport(report.id)}
-                      className="col-span-2 text-xs text-gray-600 hover:text-gray-400 py-2 text-center"
+                      disabled={processingId === report.id}
+                      className="col-span-2 text-xs text-gray-600 hover:text-gray-400 py-2 text-center disabled:opacity-30"
                     >
                       Ignorar esta denúncia
                     </button>
