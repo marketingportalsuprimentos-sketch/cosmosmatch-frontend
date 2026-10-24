@@ -18,7 +18,11 @@ import { InformationCircleIcon, LockClosedIcon } from '@heroicons/react/24/solid
 // --- FIM DA CORREÇÃO ---
 
 // (Componente Loader, libraries, getCroppedImg - mantidos intactos)
-const Loader = () => <div className="text-center p-4 text-white">A carregar formulário...</div>;
+const Loader = () => (
+  <div className="mx-auto w-full max-w-4xl rounded-3xl border border-white/10 bg-[#0c1226]/80 p-10 text-center text-slate-300 backdrop-blur-xl">
+    Carregando seu perfil...
+  </div>
+);
 const libraries: ('places')[] = ['places'];
 
 function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<Blob | null> {
@@ -255,10 +259,10 @@ export const EditProfileForm = () => {
   // (Lógica de loading/erro - mantida intacta)
   const isProfileNotFoundError = (profileError as any)?.response?.status === 404;
   if (loadError) {
-    return <div className="text-red-500 p-4">Erro ao carregar Google Maps API. Verifique a chave.</div>;
+    return <div className="mx-auto max-w-4xl rounded-2xl border border-rose-400/20 bg-rose-500/10 p-5 text-rose-300">Erro ao carregar Google Maps API. Verifique a chave.</div>;
   }
   if (profileError && !isProfileNotFoundError) {
-    return <div className="text-red-500 p-4">Erro ao carregar dados do perfil. Tente recarregar.</div>;
+    return <div className="mx-auto max-w-4xl rounded-2xl border border-rose-400/20 bg-rose-500/10 p-5 text-rose-300">Erro ao carregar dados do perfil. Tente recarregar.</div>;
   }
   if (!isLoaded || (isProfileLoading && !isProfileNotFoundError)) {
     return <Loader />;
@@ -268,58 +272,63 @@ export const EditProfileForm = () => {
   return (
     <>
       {/* Formulário Principal */}
-      <div className="w-full max-w-2xl p-4 md:p-6 space-y-4 bg-gray-800 rounded-lg shadow-lg text-white">
-        <h2 className="text-2xl md:text-3xl font-bold text-center text-indigo-400">Complete o seu Perfil</h2>
-        <p className="text-center text-gray-400 text-sm md:text-base">Estes dados são essenciais para calcular a sua compatibilidade cósmica.</p>
+      <div className="mx-auto w-full max-w-4xl space-y-7 rounded-[30px] border border-violet-300/15 bg-[#0c1226]/88 p-5 text-white shadow-[0_30px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:p-7 lg:p-10">
+        <div className="text-center">
+          <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-violet-300">Perfil e compatibilidade</span>
+          <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">Conte um pouco sobre você</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
+            Preencha os dados abaixo para personalizar sua experiência e permitir os cálculos de compatibilidade.
+          </p>
+        </div>
 
         {/* (Secção do Avatar - Sem alterações) */}
-        <div className="flex flex-col items-center space-y-3 border-b border-gray-700 pb-4 mb-4">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
           {displayAvatar ? (
             <img 
               src={displayAvatar} 
               alt="Avatar" 
-              className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 border-indigo-500 bg-gray-600"
+              className="h-28 w-28 rounded-full border-4 border-violet-500/70 bg-slate-700 object-cover shadow-[0_0_40px_rgba(139,92,246,0.22)]"
             />
           ) : (
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-indigo-500 bg-gray-700 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 md:w-12 md:h-12 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-violet-500/70 bg-[#121a31] shadow-[0_0_40px_rgba(139,92,246,0.18)]">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
           )}
-          <label htmlFor="avatar-upload" className={`cursor-pointer px-4 py-2 bg-indigo-600 rounded-md hover:bg-indigo-700 text-sm ${(isUpdatingAvatar || isUpdatingProfile) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <label htmlFor="avatar-upload" className={`cursor-pointer rounded-xl border border-violet-400/20 bg-violet-500/15 px-5 py-2.5 text-sm font-bold text-violet-100 transition hover:bg-violet-500/25 ${(isUpdatingAvatar || isUpdatingProfile) ? 'cursor-not-allowed opacity-50' : ''}`}>
             {isUpdatingAvatar ? 'A enviar...' : (isUpdatingProfile ? 'A salvar...' : 'Mudar Foto')}
           </label>
           <input ref={avatarFileInputRef} id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarFileChange} disabled={isUpdatingAvatar || isUpdatingProfile} className="hidden"/>
         </div>
 
         {/* (Formulário) */}
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* (Campos de Data, Cidade, Hora - Sem alterações) */}
-          <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
-            <div className="w-full md:w-1/3">
-              <label htmlFor="birthDate" className="block text-sm font-medium text-gray-300">Data de Nascimento *</label>
-              <input id="birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"/>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="w-full">
+              <label htmlFor="birthDate" className="mb-2 block text-sm font-bold text-slate-200">Data de Nascimento *</label>
+              <input id="birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10"/>
             </div>
-            <div className="w-full md:w-1/3">
-              <label htmlFor="birthCity" className="block text-sm font-medium text-gray-300">Cidade de Nascimento *</label>
+            <div className="w-full">
+              <label htmlFor="birthCity" className="mb-2 block text-sm font-bold text-slate-200">Cidade de Nascimento *</label>
               <Autocomplete onLoad={onBirthCityLoad} onPlaceChanged={onBirthCityPlaceChanged} options={{ types: ['(cities)'] }}>
-                <input id="birthCity" type="text" defaultValue={birthCity} required className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Digite e selecione..."/>
+                <input id="birthCity" type="text" defaultValue={birthCity} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10" placeholder="Digite e selecione..."/>
               </Autocomplete>
             </div>
-            <div className="w-full md:w-1/3">
-              <label htmlFor="birthTime" className="block text-sm font-medium text-gray-300">Hora de Nascimento *</label>
-              <input id="birthTime" type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} required className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"/>
+            <div className="w-full">
+              <label htmlFor="birthTime" className="mb-2 block text-sm font-bold text-slate-200">Hora de Nascimento *</label>
+              <input id="birthTime" type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10"/>
             </div>
           </div>
           
           {/* (Campo Nome de Nascimento - Sem alterações) */}
           <div className="w-full">
-            <label htmlFor="fullNameBirth" className="flex items-center text-sm font-medium text-gray-300">
+            <label htmlFor="fullNameBirth" className="mb-2 flex items-center text-sm font-bold text-slate-200">
               <span>Nome Completo de Nascimento *</span>
               <span className="group relative ml-1.5">
-                <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-pointer" />
-                <span className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-white bg-gray-900 border border-gray-600 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+                <InformationCircleIcon className="h-4 w-4 cursor-pointer text-slate-500" />
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-64 rounded-xl border border-white/10 bg-[#070b18] p-3 text-xs leading-5 text-white opacity-0 shadow-2xl transition-opacity group-hover:opacity-100" style={{ transform: 'translateX(-50%)' }}>
                   Por favor, insira o nome exato da sua certidão de nascimento. Usamos este dado *apenas* para calcular os seus números (Expressão, Alma). Este nome <strong>não</strong> será público.
                 </span>
               </span>
@@ -330,22 +339,22 @@ export const EditProfileForm = () => {
               value={fullNameBirth}
               onChange={(e) => setFullNameBirth(e.target.value)}
               required
-              className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10"
               placeholder="Ex: Maria Joaquina da Silva"
             />
           </div>
 
           {/* (Campos Cidade Atual, Gênero - Sem alterações) */}
-          <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
-            <div className="flex-1">
-              <label htmlFor="currentCity" className="block text-sm font-medium text-gray-300">Cidade Atual *</label>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="w-full">
+              <label htmlFor="currentCity" className="mb-2 block text-sm font-bold text-slate-200">Cidade Atual *</label>
               <Autocomplete onLoad={onCurrentCityLoad} onPlaceChanged={onCurrentCityPlaceChanged} options={{ types: ['(cities)'] }}>
-                <input id="currentCity" type="text" defaultValue={currentCity} required className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Digite e selecione..."/>
+                <input id="currentCity" type="text" defaultValue={currentCity} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10" placeholder="Digite e selecione..."/>
               </Autocomplete>
             </div>
-            <div className="flex-1">
-              <label htmlFor="gender" className="block text-sm font-medium text-gray-300">Gênero *</label>
-              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value as any)} required className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            <div className="w-full">
+              <label htmlFor="gender" className="mb-2 block text-sm font-bold text-slate-200">Gênero *</label>
+              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value as any)} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10">
                 <option value="">Selecione...</option><option value="MALE">Masculino</option><option value="FEMALE">Feminino</option><option value="NON_BINARY">Não-Binário</option><option value="OTHER">Outro</option>
               </select>
             </div>
@@ -353,15 +362,15 @@ export const EditProfileForm = () => {
           
           {/* --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) --- */}
           {/* 4. Adicionar o novo campo de input para CPF/CNPJ */}
-          <div className="w-full border-t border-gray-700 pt-4">
-            <label htmlFor="cpfCnpj" className="flex items-center text-sm font-medium text-gray-300">
-              <LockClosedIcon className="w-4 h-4 text-yellow-400 mr-1.5" />
+          <div className="w-full rounded-2xl border border-amber-300/10 bg-amber-300/[0.025] p-5">
+            <label htmlFor="cpfCnpj" className="mb-2 flex items-center text-sm font-bold text-slate-200">
+              <LockClosedIcon className="mr-1.5 h-4 w-4 text-amber-300" />
               <span>CPF / CNPJ (Para Pagamentos) *</span>
               
               <span className="group relative ml-1.5">
-                <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-pointer" />
+                <InformationCircleIcon className="h-4 w-4 cursor-pointer text-slate-500" />
                 <span 
-                  className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-white bg-gray-900 border border-gray-600 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-64 rounded-xl border border-white/10 bg-[#070b18] p-3 text-xs leading-5 text-white opacity-0 shadow-2xl transition-opacity group-hover:opacity-100"
                   style={{ transform: 'translateX(-50%)' }}
                 >
                   Para gerar o PIX, o nosso parceiro de pagamentos (Asaas)
@@ -376,7 +385,7 @@ export const EditProfileForm = () => {
               value={cpfCnpj}
               onChange={(e) => setCpfCnpj(e.target.value)}
               required
-              className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10"
               placeholder="Digite apenas os números"
             />
           </div>
@@ -385,14 +394,14 @@ export const EditProfileForm = () => {
 
           {/* (Campo Bio - Sem alterações) */}
           <div>
-            <label htmlFor="bio" className="block text-sm font-medium text-gray-300">Sobre mim (Bio)</label>
-            <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={2} className="w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 resize-none" placeholder="Conte um pouco sobre você... (opcional)"/>
+            <label htmlFor="bio" className="mb-2 block text-sm font-bold text-slate-200">Sobre mim (Bio)</label>
+            <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={2} className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10" placeholder="Conte um pouco sobre você... (opcional)"/>
           </div>
 
           {/* (Botão Salvar - Sem alterações) */}
           <div className="pt-2">
-            <button type="submit" disabled={isUpdatingProfile || isUpdatingAvatar} className="w-full px-4 py-2 font-semibold text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {(isUpdatingProfile || isUpdatingAvatar) ? 'A salvar...' : 'Salvar Perfil'}
+            <button type="submit" disabled={isUpdatingProfile || isUpdatingAvatar} className="flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-extrabold text-white shadow-[0_14px_35px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:from-fuchsia-400 hover:to-violet-500 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50">
+              {(isUpdatingProfile || isUpdatingAvatar) ? 'Salvando seu perfil...' : 'Concluir meu perfil'}
             </button>
           </div>
         </form>
@@ -412,7 +421,7 @@ export const EditProfileForm = () => {
             >
               <img ref={imgRef} alt="Imagem para cortar" src={imageSrc} onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
-            <button onClick={handleSaveCrop} disabled={!completedCrop || isUpdatingAvatar || isUpdatingProfile} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
+            <button onClick={handleSaveCrop} disabled={!completedCrop || isUpdatingAvatar || isUpdatingProfile} className="mt-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-2.5 font-bold text-white transition hover:from-fuchsia-400 hover:to-violet-500 disabled:opacity-50">
               {(isUpdatingAvatar || isUpdatingProfile) ? 'Aguarde...' : 'Salvar Corte'}
             </button>
           </div>
