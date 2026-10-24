@@ -16,9 +16,9 @@ const registerSchemaBase = z.object({
   // Adicionamos as mesmas regras de validação que o backend
   username: z
     .string()
-    .min(3, 'O nome de utilizador deve ter pelo menos 3 caracteres')
+    .min(3, 'Seu @ deve ter pelo menos 3 caracteres')
     .regex(/^[a-zA-Z0-9_]+$/, {
-      message: 'O nome de utilizador só pode conter letras, números e _',
+      message: 'Seu @ só pode conter letras, números e _',
     }),
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
