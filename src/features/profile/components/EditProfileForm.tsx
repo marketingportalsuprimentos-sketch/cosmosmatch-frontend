@@ -354,8 +354,19 @@ export const EditProfileForm = () => {
             </div>
             <div className="w-full">
               <label htmlFor="gender" className="mb-2 block text-sm font-bold text-slate-200">Gênero *</label>
-              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value as any)} required className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10">
-                <option value="">Selecione...</option><option value="MALE">Masculino</option><option value="FEMALE">Feminino</option><option value="NON_BINARY">Não-Binário</option><option value="OTHER">Outro</option>
+              <select
+                id="gender"
+                value={gender}
+                onChange={(e) => setGender(e.target.value as any)}
+                required
+                style={{ colorScheme: 'dark' }}
+                className="w-full rounded-xl border border-white/10 bg-[#121a31] px-4 py-3 text-sm text-white outline-none transition focus:border-violet-400/60 focus:ring-4 focus:ring-violet-500/10"
+              >
+                <option value="" className="bg-[#121a31] text-slate-300">Selecione...</option>
+                <option value="MALE" className="bg-[#121a31] text-white">Masculino</option>
+                <option value="FEMALE" className="bg-[#121a31] text-white">Feminino</option>
+                <option value="NON_BINARY" className="bg-[#121a31] text-white">Não-Binário</option>
+                <option value="OTHER" className="bg-[#121a31] text-white">Outro</option>
               </select>
             </div>
           </div>
