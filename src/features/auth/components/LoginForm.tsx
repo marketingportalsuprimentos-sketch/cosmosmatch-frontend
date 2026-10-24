@@ -1,51 +1,46 @@
-// src/features/auth/components/LoginForm.tsx
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLogin } from '../hooks/useAuthMutations';
 import { LoginDto } from '@/types/auth.types';
-import { toast } from 'sonner'; // Atualizado para 'sonner' conforme padrão anterior
+import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  ExclamationTriangleIcon, 
-  ArrowPathIcon, 
-  XMarkIcon 
+import {
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail, FiRefreshCw } from 'react-icons/fi';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
 });
 
+const inputBase =
+  'block w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60';
+
 export function LoginForm() {
   const navigate = useNavigate();
-  const { setUser } = useAuth(); // Para atualizar o estado global se reativar
-  
-  // Estado para controlar o Modal de Quarentena
-  const [quarantineCredentials, setQuarantineCredentials] = useState<LoginDto | null>(null);
+  const { setUser } = useAuth();
 
-  // Hook de Login padrão
+  const [quarantineCredentials, setQuarantineCredentials] = useState<LoginDto | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   const { mutate: login, isPending: isLoggingIn } = useLogin();
 
-  // Hook Manual para Reativação (Chama a rota que criamos no AuthController)
   const { mutate: reactivate, isPending: isReactivating } = useMutation({
     mutationFn: async (data: LoginDto) => {
       const response = await api.post('/auth/reactivate', data);
       return response.data;
     },
     onSuccess: (data) => {
-      // 1. Salva o Token
       localStorage.setItem('cosmosmatch_token', data.accessToken);
-      
-      // 2. Atualiza o Contexto de Auth manualmente (para o utilizador entrar na hora)
       setUser(data.user);
-      
-      // 3. Feedback e Redirecionamento
       toast.success(data.message || 'Conta restaurada com sucesso!');
       setQuarantineCredentials(null);
       navigate('/feed');
@@ -53,7 +48,7 @@ export function LoginForm() {
     onError: (error) => {
       console.error(error);
       toast.error('Erro ao restaurar conta. Tente novamente.');
-    }
+    },
   });
 
   const {
@@ -67,16 +62,14 @@ export function LoginForm() {
   const onSubmit = (data: LoginDto) => {
     login(data, {
       onError: (error: any) => {
-        // --- AQUI ESTÁ A MÁGICA ---
-        // Verifica se o erro é especificamente o de Quarentena
         const errorMessage = error?.response?.data?.message;
-        
+
         if (errorMessage === 'ACCOUNT_IN_QUARANTINE') {
-          // Guarda as credenciais e abre o modal
           setQuarantineCredentials(data);
         } else {
-          // Erro normal (senha errada, etc)
-          const msg = error?.response?.data?.message || 'Erro ao entrar. Verifique seus dados.';
+          const msg =
+            error?.response?.data?.message ||
+            'Erro ao entrar. Verifique seus dados.';
           toast.error(msg);
         }
       },
@@ -94,118 +87,154 @@ export function LoginForm() {
     toast.info('Reativação cancelada. A conta permanece agendada para exclusão.');
   };
 
+  const disabled = isLoggingIn || isReactivating;
+
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-300">
-            Endereço de email
+          <label
+            htmlFor="email"
+            className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200"
+          >
+            <FiMail className="text-cyan-300" />
+            E-mail
           </label>
-          <div className="mt-2">
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              disabled={isLoggingIn || isReactivating}
-              {...register('email')}
-              className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
-            />
-            {errors.email && (
-              <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>
-            )}
-          </div>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="voce@exemplo.com"
+            disabled={disabled}
+            {...register('email')}
+            className={inputBase}
+          />
+          {errors.email && (
+            <p className="mt-2 text-sm font-medium text-rose-400">
+              {errors.email.message}
+            </p>
+          )}
         </div>
 
         <div>
-          <div className="flex items-center justify-between">
-            <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-300">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label
+              htmlFor="password"
+              className="flex items-center gap-2 text-sm font-bold text-slate-200"
+            >
+              <FiLock className="text-violet-300" />
               Senha
             </label>
-            <div className="text-sm">
-              <Link
-                to="/forgot-password"
-                className="font-semibold text-indigo-400 hover:text-indigo-300"
-              >
-                Esqueceu a senha?
-              </Link>
-            </div>
+
+            <Link
+              to="/forgot-password"
+              className="text-xs font-bold text-violet-300 transition hover:text-violet-200 sm:text-sm"
+            >
+              Esqueceu a senha?
+            </Link>
           </div>
-          <div className="mt-2">
+
+          <div className="relative">
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
-              disabled={isLoggingIn || isReactivating}
+              placeholder="Digite sua senha"
+              disabled={disabled}
               {...register('password')}
-              className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+              className={`${inputBase} pr-12`}
             />
-            {errors.password && (
-              <p className="mt-2 text-sm text-red-400">
-                {errors.password.message}
-              </p>
-            )}
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              disabled={disabled}
+              className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-500 transition hover:bg-white/5 hover:text-slate-200 disabled:opacity-50"
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </button>
           </div>
+
+          {errors.password && (
+            <p className="mt-2 text-sm font-medium text-rose-400">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
-        <div>
-          <button
-            type="submit"
-            disabled={isLoggingIn || isReactivating}
-            className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 transition-all"
-          >
-            {isLoggingIn ? (
-              <span className="flex items-center gap-2">
-                <ArrowPathIcon className="h-4 w-4 animate-spin" /> Entrando...
-              </span>
-            ) : (
-              'Entrar'
-            )}
-          </button>
+        <button
+          type="submit"
+          disabled={disabled}
+          className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-extrabold text-white shadow-[0_14px_35px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:from-fuchsia-400 hover:to-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoggingIn ? (
+            <>
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              Entrando...
+            </>
+          ) : (
+            <>
+              Entrar no CosmosMatch
+              <FiArrowRight />
+            </>
+          )}
+        </button>
+
+        <div className="flex items-center justify-center gap-2 pt-1 text-xs text-slate-600">
+          <FiLock />
+          <span>Acesso protegido à sua conta</span>
         </div>
       </form>
 
-      {/* --- MODAL DE QUARENTENA --- */}
       {quarantineCredentials && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 border border-yellow-600/50 rounded-2xl shadow-2xl max-w-md w-full p-6 relative overflow-hidden">
-            {/* Efeito de brilho de fundo */}
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-yellow-500/20 blur-2xl rounded-full"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#03050d]/90 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[26px] border border-amber-400/20 bg-[#0d1224] p-7 shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-amber-400/10 blur-3xl" />
 
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-yellow-500/10 p-3 rounded-full mb-4">
-                <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500" />
+            <div className="relative flex flex-col items-center text-center">
+              <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-amber-400/20 bg-amber-400/10">
+                <ExclamationTriangleIcon className="h-7 w-7 text-amber-300" />
               </div>
-              
-              <h3 className="text-xl font-bold text-white mb-2">Conta em Quarentena</h3>
-              
-              <p className="text-gray-300 mb-6 text-sm leading-relaxed">
-                Esta conta está agendada para exclusão. Se não fizer nada, ela será apagada permanentemente em breve.
-                <br /><br />
-                <span className="font-semibold text-yellow-400">Deseja restaurar sua conta agora?</span>
+
+              <span className="mb-2 text-xs font-extrabold uppercase tracking-[0.16em] text-amber-300">
+                Conta em quarentena
+              </span>
+              <h3 className="text-2xl font-black tracking-[-0.04em] text-white">
+                Deseja restaurar sua conta?
+              </h3>
+
+              <p className="mt-4 text-sm leading-6 text-slate-400">
+                Esta conta está agendada para exclusão. Se você continuar, ela será
+                reativada e você poderá acessar normalmente o CosmosMatch.
               </p>
 
-              <div className="flex flex-col gap-3 w-full">
+              <div className="mt-7 flex w-full flex-col gap-3">
                 <button
                   onClick={handleConfirmReactivation}
                   disabled={isReactivating}
-                  className="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 font-extrabold text-[#1d1203] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isReactivating ? (
                     <>
-                      <ArrowPathIcon className="h-5 w-5 animate-spin" /> Restaurando...
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                      Restaurando...
                     </>
                   ) : (
-                    'Sim, Restaurar Conta'
+                    <>
+                      <FiRefreshCw />
+                      Restaurar minha conta
+                    </>
                   )}
                 </button>
-                
+
                 <button
                   onClick={handleCancelReactivation}
                   disabled={isReactivating}
-                  className="w-full py-3 bg-transparent border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-5 font-bold text-slate-300 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-60"
                 >
                   <XMarkIcon className="h-5 w-5" />
-                  Não, manter excluída
+                  Manter conta excluída
                 </button>
               </div>
             </div>
