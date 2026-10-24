@@ -1,193 +1,171 @@
-// frontend/src/features/auth/components/RegisterForm.tsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-// --- INÍCIO DA ATUALIZAÇÃO (Fase 2: Frontend) ---
-// 1. Removemos o 'z' local e importamos o schema CORRETO de auth.types
-import {
-  RegisterDto,
-  registerSchema,
-} from '@/types/auth.types';
-// --- FIM DA ATUALIZAÇÃO ---
+import { FiArrowRight, FiAtSign, FiCheck, FiLock, FiMail, FiUser } from 'react-icons/fi';
+import { RegisterDto, registerSchema } from '@/types/auth.types';
 import { useRegister } from '../hooks/useAuthMutations';
-import { toast } from '@/lib/toast';
 
-// 2. O schema local foi REMOVIDO daqui, pois já o importamos de auth.types
+const inputBase =
+  'block w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60';
 
 export function RegisterForm() {
-  // --- INÍCIO DA CORREÇÃO (Erro TS2339) ---
-  // A propriedade correta é 'isPending', nós a renomeamos para 'isRegistering'
-  // --- INÍCIO DA ATUALIZAÇÃO (Fase 2.1: Erro no Campo) ---
-  // 1. Extraímos 'setError' do useForm (na linha 27)
-  // 2. Passamos 'setError' para o useRegister
   const {
     register,
     handleSubmit,
-    setError, // <-- 1. EXTRAÍDO
+    setError,
     formState: { errors },
   } = useForm<RegisterDto>({
-    // 3. O resolver agora usa o schema importado (que tem o username)
     resolver: zodResolver(registerSchema),
   });
-  
+
   const { mutate: registerUser, isPending: isRegistering } = useRegister({
-    setError, // <-- 2. PASSADO PARA O HOOK
+    setError,
   });
-  // --- FIM DA ATUALIZAÇÃO ---
-  // --- FIM DA CORREÇÃO ---
 
-
-  // 4. A sua lógica de onSubmit foi atualizada
   const onSubmit = (data: RegisterDto) => {
-    // 'data' agora contém 'username' graças ao react-hook-form e ao zodResolver
     const userData = {
       name: data.name,
-      // --- INÍCIO DA ATUALIZAÇÃO ---
-      username: data.username, // <-- Adicionámos o username ao envio
-      // --- FIM DA ATUALIZAÇÃO ---
+      username: data.username,
       email: data.email,
       password: data.password,
     };
-    
-    // --- INÍCIO DA ATUALIZAÇÃO (Fase 2.1: Limpeza) ---
-    // O try/catch foi removido. O 'onError' do useRegister
-    // (no ficheiro useAuthMutations.ts) agora trata todos os erros.
+
     registerUser(userData as RegisterDto);
-    // --- FIM DA ATUALIZAÇÃO ---
   };
 
   return (
-    // 5. O JSX foi atualizado com o novo campo
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
-        <label
-          htmlFor="name"
-          className="block text-sm font-medium leading-6 text-gray-300"
-        >
-          Nome (Exibição)
+        <label htmlFor="name" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
+          <FiUser className="text-violet-300" />
+          Nome completo
         </label>
-        <div className="mt-2">
-          <input
-            id="name"
-            type="text"
-            autoComplete="name"
-            disabled={isRegistering}
-            {...register('name')}
-            className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
-          />
-          {errors.name && (
-            <p className="mt-2 text-sm text-red-400">{errors.name.message}</p>
-          )}
-        </div>
+        <input
+          id="name"
+          type="text"
+          autoComplete="name"
+          placeholder="Ex.: Cássio Batista"
+          disabled={isRegistering}
+          {...register('name')}
+          className={inputBase}
+        />
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          Digite seu nome completo, como consta no documento.
+        </p>
+        {errors.name && (
+          <p className="mt-2 text-sm font-medium text-rose-400">{errors.name.message}</p>
+        )}
       </div>
 
-      {/* --- INÍCIO DA ADIÇÃO (Fase 2: Frontend JSX) --- */}
       <div>
-        <label
-          htmlFor="username"
-          className="block text-sm font-medium leading-6 text-gray-300"
-        >
-          Nome de Utilizador (o seu @)
+        <label htmlFor="username" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
+          <FiAtSign className="text-fuchsia-300" />
+          Seu @ no CosmosMatch
         </label>
-        <div className="mt-2">
+
+        <div className="flex overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] transition focus-within:border-violet-400/60 focus-within:bg-white/[0.065] focus-within:ring-4 focus-within:ring-violet-500/10">
+          <span className="grid w-12 shrink-0 place-items-center border-r border-white/10 text-sm font-bold text-fuchsia-300">
+            @
+          </span>
           <input
             id="username"
             type="text"
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="cassio"
             disabled={isRegistering}
             {...register('username')}
-            className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+            className="block min-w-0 flex-1 border-0 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
           />
-          <span className="text-xs text-gray-400">
-            (Apenas letras, números e _. Ex: joao_silva)
+        </div>
+
+        <div className="mt-2 flex items-start gap-2 text-xs leading-5 text-slate-500">
+          <FiCheck className="mt-0.5 shrink-0 text-emerald-400" />
+          <span>
+            Esse será seu identificador público no app. Use letras, números e _. Ex.: @cassio
           </span>
-          {errors.username && (
-            <p className="mt-2 text-sm text-red-400">
-              {errors.username.message}
-            </p>
-          )}
         </div>
-      </div>
-      {/* --- FIM DA ADIÇÃO --- */}
 
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium leading-6 text-gray-300"
-        >
-          Endereço de email
-        </label>
-        <div className="mt-2">
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            disabled={isRegistering}
-            {...register('email')}
-            className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
-          />
-          {errors.email && (
-            <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>
-          )}
-        </div>
+        {errors.username && (
+          <p className="mt-2 text-sm font-medium text-rose-400">{errors.username.message}</p>
+        )}
       </div>
 
       <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium leading-6 text-gray-300"
-        >
-          Senha
+        <label htmlFor="email" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
+          <FiMail className="text-cyan-300" />
+          E-mail
         </label>
-        <div className="mt-2">
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          placeholder="voce@exemplo.com"
+          disabled={isRegistering}
+          {...register('email')}
+          className={inputBase}
+        />
+        {errors.email && (
+          <p className="mt-2 text-sm font-medium text-rose-400">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="password" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
+            <FiLock className="text-violet-300" />
+            Senha
+          </label>
           <input
             id="password"
             type="password"
             autoComplete="new-password"
+            placeholder="Mínimo 8 caracteres"
             disabled={isRegistering}
             {...register('password')}
-            className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+            className={inputBase}
           />
           {errors.password && (
-            <p className="mt-2 text-sm text-red-400">
-              {errors.password.message}
-            </p>
+            <p className="mt-2 text-sm font-medium text-rose-400">{errors.password.message}</p>
           )}
         </div>
-      </div>
 
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-medium leading-6 text-gray-300"
-        >
-          Confirmar Senha
-        </label>
-        <div className="mt-2">
+        <div>
+          <label htmlFor="confirmPassword" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
+            <FiLock className="text-violet-300" />
+            Confirmar senha
+          </label>
           <input
             id="confirmPassword"
             type="password"
             autoComplete="new-password"
+            placeholder="Repita a senha"
             disabled={isRegistering}
             {...register('confirmPassword')}
-            className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+            className={inputBase}
           />
           {errors.confirmPassword && (
-            <p className="mt-2 text-sm text-red-400">
+            <p className="mt-2 text-sm font-medium text-rose-400">
               {errors.confirmPassword.message}
             </p>
           )}
         </div>
       </div>
 
-      <div>
-        <button
-          type="submit"
-          disabled={isRegistering}
-          className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50"
-        >
-          {isRegistering ? 'A criar conta...' : 'Criar conta'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isRegistering}
+        className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-3 text-sm font-extrabold text-white shadow-[0_14px_35px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:from-fuchsia-400 hover:to-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isRegistering ? (
+          'Criando sua conta...'
+        ) : (
+          <>
+            Criar minha conta
+            <FiArrowRight />
+          </>
+        )}
+      </button>
     </form>
   );
 }
