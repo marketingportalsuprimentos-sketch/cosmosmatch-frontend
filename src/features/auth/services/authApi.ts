@@ -44,7 +44,7 @@ export const resetPassword = async (payload: ResetPasswordDto) => {
  * Envia o token de verificação (do link do email) para o backend
  */
 export const verifyEmail = async (token: string): Promise<AuthResponse> => {
-  const { data } = await api.get<AuthResponse>('/auth/verify-email', {
+  const { data } = await api.post<AuthResponse>('/auth/verify-email', null, {
     params: { token }, // Envia como ?token=...
   });
   return data;
