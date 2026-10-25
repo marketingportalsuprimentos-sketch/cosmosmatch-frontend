@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGetMyProfile, useUpdateProfile, useUpdateAvatar } from '../hooks/useProfile';
 import type { UpdateProfileDto } from '@/types/profile.types';
 import { Autocomplete, useLoadScript } from '@react-google-maps/api';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Modal } from '@/components/common/Modal';
 import { toast } from '@/lib/toast';
@@ -130,16 +130,31 @@ export const EditProfileForm = () => {
   // (handlers do Avatar - sem alterações)
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setOriginalFileName(file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageSrc(reader.result as string);
-        setIsCropModalOpen(true);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido.');
       if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
+      return;
     }
+
+    setOriginalFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageSrc(reader.result as string);
+      setIsCropModalOpen(true);
+    };
+    reader.onerror = () => {
+      toast.error('Não foi possível abrir esta imagem. Tente outra foto.');
+    };
+    reader.readAsDataURL(file);
+
+    if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
+  };
+
+  const handleChooseAvatar = () => {
+    if (isUpdatingAvatar || isUpdatingProfile) return;
+    avatarFileInputRef.current?.click();
   };
 
   // (handlers do Autocomplete - sem alterações)
@@ -226,9 +241,13 @@ export const EditProfileForm = () => {
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     imgRef.current = e.currentTarget;
     const { width, height } = e.currentTarget;
-    const initialCrop = centerCrop(makeAspectCrop({ unit: '%', width: 90 }, 1, width, height), width, height);
+    const initialCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
+      width,
+      height,
+    );
     setCrop(initialCrop);
-    setCompletedCrop(initialCrop);
+    setCompletedCrop(convertToPixelCrop(initialCrop, width, height));
   };
 
   const handleSaveCrop = async () => {
@@ -251,6 +270,7 @@ export const EditProfileForm = () => {
       setImageSrc(null);
       setCrop(undefined);
       setCompletedCrop(null);
+      toast.success('Foto pronta. Agora conclua o perfil para salvar.');
     } else {
       console.error("Falha ao gerar blob da imagem cortada.");
     }
@@ -296,10 +316,26 @@ export const EditProfileForm = () => {
               </svg>
             </div>
           )}
-          <label htmlFor="avatar-upload" className={`cursor-pointer rounded-xl border border-violet-400/20 bg-violet-500/15 px-5 py-2.5 text-sm font-bold text-violet-100 transition hover:bg-violet-500/25 ${(isUpdatingAvatar || isUpdatingProfile) ? 'cursor-not-allowed opacity-50' : ''}`}>
-            {isUpdatingAvatar ? 'A enviar...' : (isUpdatingProfile ? 'A salvar...' : 'Mudar Foto')}
-          </label>
-          <input ref={avatarFileInputRef} id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarFileChange} disabled={isUpdatingAvatar || isUpdatingProfile} className="hidden"/>
+          <button
+            type="button"
+            onClick={handleChooseAvatar}
+            disabled={isUpdatingAvatar || isUpdatingProfile}
+            className="rounded-xl border border-violet-400/20 bg-violet-500/15 px-5 py-2.5 text-sm font-bold text-violet-100 transition hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isUpdatingAvatar ? 'Enviando foto...' : (isUpdatingProfile ? 'Salvando...' : (displayAvatar ? 'Trocar foto' : 'Adicionar foto'))}
+          </button>
+          <p className="text-center text-xs leading-5 text-slate-500">
+            Escolha uma imagem, ajuste o enquadramento e confirme o recorte.
+          </p>
+          <input
+            ref={avatarFileInputRef}
+            id="avatar-upload"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onChange={handleAvatarFileChange}
+            disabled={isUpdatingAvatar || isUpdatingProfile}
+            className="hidden"
+          />
         </div>
 
         {/* (Formulário) */}
@@ -353,21 +389,43 @@ export const EditProfileForm = () => {
               </Autocomplete>
             </div>
             <div className="w-full">
-              <label htmlFor="gender" className="mb-2 block text-sm font-bold text-slate-200">Gênero *</label>
-              <select
-                id="gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value as any)}
-                required
-                style={{ colorScheme: 'dark' }}
-                className="w-full rounded-xl border border-white/10 bg-[#121a31] px-4 py-3 text-sm text-white outline-none transition focus:border-violet-400/60 focus:ring-4 focus:ring-violet-500/10"
-              >
-                <option value="" className="bg-[#121a31] text-slate-300">Selecione...</option>
-                <option value="MALE" className="bg-[#121a31] text-white">Masculino</option>
-                <option value="FEMALE" className="bg-[#121a31] text-white">Feminino</option>
-                <option value="NON_BINARY" className="bg-[#121a31] text-white">Não-Binário</option>
-                <option value="OTHER" className="bg-[#121a31] text-white">Outro</option>
-              </select>
+              <span className="mb-2 block text-sm font-bold text-slate-200">Gênero *</span>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Gênero">
+                {[
+                  ['MALE', 'Masculino'],
+                  ['FEMALE', 'Feminino'],
+                  ['NON_BINARY', 'Não-Binário'],
+                  ['OTHER', 'Outro'],
+                ].map(([value, label]) => {
+                  const selected = gender === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setGender(value as any)}
+                      className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+                        selected
+                          ? 'border-violet-400/70 bg-violet-500/20 text-white ring-2 ring-violet-500/15'
+                          : 'border-white/10 bg-white/[0.045] text-slate-300 hover:border-violet-400/30 hover:bg-white/[0.07]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {!gender && (
+                <input
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute h-px w-px opacity-0"
+                  value=""
+                  onChange={() => undefined}
+                  required
+                />
+              )}
             </div>
           </div>
           
@@ -419,9 +477,9 @@ export const EditProfileForm = () => {
       </div>
 
       {/* (Modal de Corte - Sem alterações) */}
-      <Modal isOpen={isCropModalOpen} onClose={() => setIsCropModalOpen(false)} title="Ajustar Foto de Perfil">
+      <Modal isOpen={isCropModalOpen} onClose={() => setIsCropModalOpen(false)} title="Ajustar foto de perfil">
         {imageSrc && (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-4">
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -432,9 +490,28 @@ export const EditProfileForm = () => {
             >
               <img ref={imgRef} alt="Imagem para cortar" src={imageSrc} onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
-            <button onClick={handleSaveCrop} disabled={!completedCrop || isUpdatingAvatar || isUpdatingProfile} className="mt-4 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-2.5 font-bold text-white transition hover:from-fuchsia-400 hover:to-violet-500 disabled:opacity-50">
-              {(isUpdatingAvatar || isUpdatingProfile) ? 'Aguarde...' : 'Salvar Corte'}
-            </button>
+            <div className="flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCropModalOpen(false);
+                  setImageSrc(null);
+                  setCrop(undefined);
+                  setCompletedCrop(null);
+                }}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCrop}
+                disabled={!completedCrop || isUpdatingAvatar || isUpdatingProfile}
+                className="flex-1 rounded-xl bg-gradient-to-r from-fuchsia-500 to-violet-600 px-5 py-2.5 font-bold text-white transition hover:from-fuchsia-400 hover:to-violet-500 disabled:opacity-50"
+              >
+                {(isUpdatingAvatar || isUpdatingProfile) ? 'Aguarde...' : 'Usar esta foto'}
+              </button>
+            </div>
           </div>
         )}
       </Modal>
