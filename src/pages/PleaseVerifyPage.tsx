@@ -9,6 +9,7 @@ import {
 import { FiMail, FiArrowRight, FiLogOut, FiEdit2, FiSave, FiX, FiLock } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/lib/toast';
+import { useGetMyProfile } from '@/features/profile/hooks/useProfile';
 
 export default function PleaseVerifyPage() {
   // CORREÇÃO: Trocamos 'signOut' por 'logout' para corresponder ao AuthContext
@@ -23,6 +24,19 @@ export default function PleaseVerifyPage() {
   // Hooks
   const { mutate: resendEmail, isPending: isResending } = useResendVerificationEmail();
   const { mutate: updateEmail, isPending: isUpdating } = useUpdateUnverifiedEmail();
+  const { data: profile, isLoading: isProfileLoading } = useGetMyProfile();
+
+  const hasCompletedProfile = !!(
+    profile?.birthDate &&
+    profile?.birthTime &&
+    profile?.birthCity &&
+    profile?.fullNameBirth
+  );
+
+  const continuePath = hasCompletedProfile ? '/discovery' : '/onboarding';
+  const continueLabel = hasCompletedProfile
+    ? 'Continuar para Descoberta'
+    : 'Continuar para o Perfil';
 
   // Atualiza o e-mail no formulário se o usuário mudar
   useEffect(() => {
@@ -176,12 +190,17 @@ export default function PleaseVerifyPage() {
                   Você pode confirmar o email depois.
                 </p>
                 
-                {/* BOTÃO CORRIGIDO PARA ONBOARDING */}
                 <Link
-                  to="/onboarding"
-                  className="w-full flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors border border-gray-600"
+                  to={continuePath}
+                  aria-disabled={isProfileLoading}
+                  onClick={(event) => {
+                    if (isProfileLoading) event.preventDefault();
+                  }}
+                  className={`w-full flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors border border-gray-600 ${
+                    isProfileLoading ? 'opacity-60 cursor-wait' : ''
+                  }`}
                 >
-                  Continuar para o Perfil <FiArrowRight />
+                  {isProfileLoading ? 'Verificando perfil...' : continueLabel} <FiArrowRight />
                 </Link>
               </div>
             ) : (
