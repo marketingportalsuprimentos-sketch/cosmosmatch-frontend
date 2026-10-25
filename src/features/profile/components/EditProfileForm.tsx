@@ -177,63 +177,68 @@ export const EditProfileForm = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!profile?.imageUrl && !pendingAvatar) {
-      toast.error('A foto de perfil é obrigatória. Por favor, adicione uma foto.');
-      return; 
+    if (!profile?.imageUrl && !avatarPreview) {
+      toast.error('A foto de perfil é obrigatória. Adicione uma foto antes de continuar.');
+      return;
     }
 
-    const finalBirthCity = (document.getElementById('birthCity') as HTMLInputElement)?.value || birthCity;
-    const finalCurrentCity = (document.getElementById('currentCity') as HTMLInputElement)?.value || currentCity;
-    
+    const finalBirthCity =
+      ((document.getElementById('birthCity') as HTMLInputElement)?.value || birthCity).trim();
+    const finalCurrentCity =
+      ((document.getElementById('currentCity') as HTMLInputElement)?.value || currentCity).trim();
+    const cleanFullName = fullNameBirth.trim();
+    const cleanBio = bio.trim();
+    const cleanCpfCnpj = cpfCnpj.replace(/\D/g, '');
+
+    if (!birthDate || !finalBirthCity || !birthTime || !cleanFullName || !finalCurrentCity || !gender) {
+      toast.error('Preencha todos os campos obrigatórios do perfil.');
+      return;
+    }
+
+    if (cleanCpfCnpj.length !== 11 && cleanCpfCnpj.length !== 14) {
+      toast.error('Digite um CPF com 11 dígitos ou CNPJ com 14 dígitos.');
+      return;
+    }
+
+    if (cleanBio.length > 500) {
+      toast.error('A bio deve ter no máximo 500 caracteres.');
+      return;
+    }
+
     const profileData: UpdateProfileDto = {
-      birthDate: birthDate || undefined, 
-      birthCity: finalBirthCity || undefined,
-      birthTime: birthTime || undefined,
-      fullNameBirth: fullNameBirth || undefined,
-      currentCity: finalCurrentCity || undefined,
-      gender: gender || undefined, 
-      bio: bio || undefined,
-      // --- INÍCIO DA CORREÇÃO (Erro 500 do Asaas) ---
-      cpfCnpj: cpfCnpj || undefined, // 3. Adicionar o CPF/CNPJ ao DTO de envio
-      // --- FIM DA CORREÇÃO ---
+      birthDate,
+      birthCity: finalBirthCity,
+      birthTime,
+      fullNameBirth: cleanFullName,
+      currentCity: finalCurrentCity,
+      gender,
+      bio: cleanBio || undefined,
+      cpfCnpj: cleanCpfCnpj,
     };
 
     updateProfileMutate(profileData, {
       onSuccess: (updatedProfileData) => {
-        console.log('Dados de perfil (texto) salvos com sucesso.');
+        console.log('Dados de perfil salvos com sucesso.');
         queryClient.invalidateQueries({ queryKey: ['myProfile'] });
 
-        if (pendingAvatar) {
-          console.log('A enviar avatar pendente...');
-          updateAvatarMutate(pendingAvatar, {
-            onSuccess: (updatedProfileWithAvatar) => {
-              console.log('Avatar enviado com sucesso.');
-              setPendingAvatar(null); 
-              if (updatedProfileWithAvatar.imageUrl) {
-                 setAvatarPreview(updatedProfileWithAvatar.imageUrl);
-              }
-              queryClient.invalidateQueries({ queryKey: ['myProfile'] });
-              console.log("Perfil e Avatar salvos. Navegando para /discovery...");
-              navigate('/discovery', { replace: true });
-            },
-            onError: (avatarError) => {
-              console.error("Erro ao enviar o avatar:", avatarError);
-            }
-          });
-        } else {
-           console.log("Nenhum avatar pendente. Verificando perfil para navegação...");
-           // (Verificação do perfil completo - sem alteração)
-           if (updatedProfileData.birthDate && updatedProfileData.birthTime && updatedProfileData.birthCity && updatedProfileData.fullNameBirth) {
-              console.log("Perfil completo. Navegando para /discovery...");
-              navigate('/discovery', { replace: true });
-           } else {
-              console.log("Perfil ainda incompleto após salvar texto, permanecendo na página de onboarding");
-           }
+        if (
+          updatedProfileData.birthDate &&
+          updatedProfileData.birthTime &&
+          updatedProfileData.birthCity &&
+          updatedProfileData.fullNameBirth
+        ) {
+          toast.success('Perfil concluído com sucesso!');
+          navigate('/discovery', { replace: true });
         }
       },
-      onError: (error) => {
-        console.error("Erro ao salvar o perfil (texto):", error);
-      }
+      onError: (error: any) => {
+        console.error('Erro ao salvar o perfil:', error);
+        const rawMessage = error?.response?.data?.message;
+        const message = Array.isArray(rawMessage)
+          ? rawMessage.join(' • ')
+          : rawMessage || 'Não foi possível salvar o perfil.';
+        toast.error(message);
+      },
     });
   };
 
@@ -262,15 +267,33 @@ export const EditProfileForm = () => {
       const croppedFile = new File([croppedBlob], safeFileName, { type: 'image/png' });
       console.log(`Ficheiro cortado criado: ${safeFileName}, Tamanho: ${(croppedFile.size / 1024).toFixed(2)} KB`);
 
+      const localPreview = URL.createObjectURL(croppedFile);
+      if (avatarPreview && avatarPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview);
+      }
       setPendingAvatar(croppedFile);
-      if (avatarPreview && avatarPreview.startsWith('blob:')) { URL.revokeObjectURL(avatarPreview); } 
-      setAvatarPreview(URL.createObjectURL(croppedFile));
+      setAvatarPreview(localPreview);
 
       setIsCropModalOpen(false);
       setImageSrc(null);
       setCrop(undefined);
       setCompletedCrop(null);
-      toast.success('Foto pronta. Agora conclua o perfil para salvar.');
+
+      updateAvatarMutate(croppedFile, {
+        onSuccess: (updatedProfileWithAvatar) => {
+          setPendingAvatar(null);
+          if (updatedProfileWithAvatar.imageUrl) {
+            URL.revokeObjectURL(localPreview);
+            setAvatarPreview(updatedProfileWithAvatar.imageUrl);
+          }
+          queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+          toast.success('Foto de perfil salva com sucesso!');
+        },
+        onError: (error: any) => {
+          console.error('Erro ao enviar a foto:', error);
+          toast.error('A foto não foi enviada. Tente novamente.');
+        },
+      });
     } else {
       console.error("Falha ao gerar blob da imagem cortada.");
     }
@@ -325,7 +348,7 @@ export const EditProfileForm = () => {
             {isUpdatingAvatar ? 'Enviando foto...' : (isUpdatingProfile ? 'Salvando...' : (displayAvatar ? 'Trocar foto' : 'Adicionar foto'))}
           </button>
           <p className="text-center text-xs leading-5 text-slate-500">
-            Escolha uma imagem, ajuste o enquadramento e confirme o recorte.
+            Escolha uma imagem, ajuste o enquadramento e confirme. A foto será salva na hora.
           </p>
           <input
             ref={avatarFileInputRef}
@@ -452,7 +475,9 @@ export const EditProfileForm = () => {
               id="cpfCnpj"
               type="text"
               value={cpfCnpj}
-              onChange={(e) => setCpfCnpj(e.target.value)}
+              onChange={(e) => setCpfCnpj(e.target.value.replace(/\D/g, '').slice(0, 14))}
+              inputMode="numeric"
+              maxLength={14}
               required
               className="w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60 focus:bg-white/[0.065] focus:ring-4 focus:ring-violet-500/10"
               placeholder="Digite apenas os números"
